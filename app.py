@@ -919,8 +919,11 @@ def run_full_pipeline(query):
         vector_index = get_vector_index()
         top_k = 8 if intent == "factual" else 5
         search_results = hybrid_search(query, index, vector_index, top_k=top_k)
-    except Exception:
-        return {"status": "SUCCESS", "intent": intent, "results": [], "rejected_results": []}
+    except Exception as e:
+        return {
+            "status": "SUCCESS", "intent": intent, "results": [], "rejected_results": [],
+            "error": f"{type(e).__name__}: {e}",
+        }
 
     if intent == "factual":
         # A recipe is never a valid answer to a definitional "what is X" query —
@@ -998,6 +1001,9 @@ def render_qa_pipeline_view(ai_refine_enabled):
 
     results = pipeline_output["results"]
     rejected_results = pipeline_output["rejected_results"]
+
+    if pipeline_output.get("error"):
+        st.error(f"⚠️ Retrieval pipeline failed: {pipeline_output['error']}")
 
     if intent == "factual":
         st.subheader("📌 Factual Query Result (BM25 + MiniLM Hybrid Retrieval)")
