@@ -1,0 +1,74 @@
+{
+  "ir_evaluation_bm25": {
+    "MAP": 0.8666666666666666,
+    "NDCG@5": 0.8840790148145551,
+    "Precision@5": 0.21000000000000002,
+    "Recall@5": 0.95,
+    "num_queries": 20
+  },
+  "ir_evaluation_hybrid": {
+    "MAP": 0.975,
+    "NDCG@5": 0.9815464876785729,
+    "Precision@5": 0.22000000000000003,
+    "Recall@5": 1.0,
+    "num_queries": 20
+  },
+  "ml_evaluation": [
+    {
+      "model": "anemia",
+      "accuracy": 0.9447852760736196,
+      "f1": 0.9508196721311475,
+      "precision": 0.9666666666666667,
+      "recall": 0.9354838709677419,
+      "auc_roc": 0.9860215053763441
+    },
+    {
+      "model": "diabetes",
+      "accuracy": 0.9240882103477523,
+      "f1": 0.9340699815837937,
+      "precision": 0.9344141488577745,
+      "recall": 0.9337260677466863,
+      "auc_roc": 0.98015206185567
+    },
+    {
+      "model": "vitamin_deficiency",
+      "accuracy": 0.99375,
+      "f1": 0.9937377563789461,
+      "precision": 0.9937874251497008,
+      "recall": 0.99375,
+      "auc_roc": 0.9999834619286311
+    },
+    {
+      "model": "kidney",
+      "accuracy": 1.0,
+      "f1": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "auc_roc": 1.0
+    },
+    {
+      "model": "heart",
+      "accuracy": 0.8333333333333334,
+      "f1": 0.8163265306122449,
+      "precision": 0.8,
+      "recall": 0.8333333333333334,
+      "auc_roc": 0.8680555555555556
+    },
+    {
+      "model": "supplement",
+      "accuracy": 0.72,
+      "f1": 0.7184744142855088,
+      "precision": 0.7237730546480546,
+      "recall": 0.72,
+      "auc_roc": 0.928790997472943
+    },
+    {
+      "model": "diet_recommendation",
+      "accuracy": 0.93,
+      "f1": 0.9272979634281393,
+      "precision": 0.933874458874459,
+      "recall": 0.93,
+      "auc_roc": 0.9953879410269046
+    }
+  ]
+}

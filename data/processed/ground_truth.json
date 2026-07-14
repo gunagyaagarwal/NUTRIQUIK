@@ -1,0 +1,22 @@
+{
+  "benefits of vitamin c": ["vm_vitamin_c"],
+  "what is zinc": ["vm_zinc"],
+  "iron deficiency": ["vm_iron", "dis_002"],
+  "calcium for bones": ["vm_calcium"],
+  "vitamin d sources": ["vm_vitamin_d"],
+  "what causes scurvy": ["dis_001"],
+  "what is anemia": ["dis_002"],
+  "rickets in children": ["dis_003"],
+  "beriberi symptoms": ["dis_004"],
+  "iodine deficiency thyroid": ["dis_006", "vm_iodine"],
+  "how does immunity work": ["imm_001"],
+  "helper t cells function": ["imm_002"],
+  "antibody types": ["imm_006"],
+  "turmeric health benefits": ["sup_001"],
+  "benefits of ginger": ["sup_002"],
+  "green tea antioxidants": ["sup_004"],
+  "vegetarian diet overview": ["diet_001"],
+  "ketogenic diet": ["diet_003"],
+  "mediterranean diet benefits": ["diet_004"],
+  "chocolate macaroon recipe": ["recipe_114201"]
+}

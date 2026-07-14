@@ -1,0 +1,8 @@
+﻿__pycache__/
+*.pyc
+.claude/
+.agents/
+.env
+.streamlit/secrets.toml
+venv/
+.DS_Store

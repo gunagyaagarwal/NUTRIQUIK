@@ -1,0 +1,222 @@
+{
+  "anemia": {
+    "accuracy": 0.9447852760736196,
+    "f1": 0.9508196721311475,
+    "num_classes": 2,
+    "feature_columns": [
+      "Age",
+      "Sex",
+      "RBC",
+      "PCV",
+      "MCV",
+      "MCH",
+      "MCHC",
+      "RDW",
+      "TLC",
+      "PLT/mm3",
+      "HGB"
+    ],
+    "label_mapping": {
+      "0": 0,
+      "1": 1
+    },
+    "file_path": "models/anemia_model.pkl"
+  },
+  "diabetes": {
+    "accuracy": 0.9240882103477523,
+    "f1": 0.9340699815837937,
+    "num_classes": 2,
+    "feature_columns": [
+      "age",
+      "hypertension",
+      "heart_disease",
+      "bmi",
+      "HbA1c_level",
+      "blood_glucose_level",
+      "gender_Female",
+      "gender_Male",
+      "gender_Other",
+      "smoking_No Info",
+      "smoking_current",
+      "smoking_ever",
+      "smoking_former",
+      "smoking_never",
+      "smoking_not current"
+    ],
+    "label_mapping": {
+      "0": 0,
+      "1": 1
+    },
+    "file_path": "models/diabetes_model.pkl"
+  },
+  "vitamin_deficiency": {
+    "accuracy": 0.99375,
+    "f1": 0.9937377563789461,
+    "num_classes": 5,
+    "feature_columns": [
+      "age",
+      "bmi",
+      "vitamin_a_percent_rda",
+      "vitamin_c_percent_rda",
+      "vitamin_d_percent_rda",
+      "vitamin_e_percent_rda",
+      "vitamin_b12_percent_rda",
+      "folate_percent_rda",
+      "calcium_percent_rda",
+      "iron_percent_rda",
+      "hemoglobin_g_dl",
+      "serum_vitamin_d_ng_ml",
+      "serum_vitamin_b12_pg_ml",
+      "serum_folate_ng_ml",
+      "symptoms_count",
+      "has_night_blindness",
+      "has_fatigue",
+      "has_bleeding_gums",
+      "has_bone_pain",
+      "has_muscle_weakness",
+      "has_numbness_tingling",
+      "has_memory_problems",
+      "has_pale_skin",
+      "has_multiple_deficiencies",
+      "gender_Female",
+      "gender_Male",
+      "smoking_status_Current",
+      "smoking_status_Former",
+      "smoking_status_Never",
+      "alcohol_consumption_Heavy",
+      "alcohol_consumption_Moderate",
+      "alcohol_consumption_None",
+      "exercise_level_Active",
+      "exercise_level_Light",
+      "exercise_level_Moderate",
+      "exercise_level_Sedentary",
+      "diet_type_Omnivore",
+      "diet_type_Pescatarian",
+      "diet_type_Vegan",
+      "diet_type_Vegetarian",
+      "sun_exposure_High",
+      "sun_exposure_Low",
+      "sun_exposure_Moderate",
+      "income_level_High",
+      "income_level_Low",
+      "income_level_Middle",
+      "latitude_region_High",
+      "latitude_region_Low",
+      "latitude_region_Mid"
+    ],
+    "label_mapping": {
+      "Anemia": 0,
+      "Healthy": 1,
+      "Night_Blindness": 2,
+      "Rickets_Osteomalacia": 3,
+      "Scurvy": 4
+    },
+    "file_path": "models/vitamin_deficiency_model.pkl"
+  },
+  "kidney": {
+    "accuracy": 1.0,
+    "f1": 1.0,
+    "num_classes": 2,
+    "feature_columns": [
+      "Bp",
+      "Sg",
+      "Al",
+      "Su",
+      "Rbc",
+      "Bu",
+      "Sc",
+      "Sod",
+      "Pot",
+      "Hemo",
+      "Wbcc",
+      "Rbcc",
+      "Htn"
+    ],
+    "label_mapping": {
+      "0": 0,
+      "1": 1
+    },
+    "file_path": "models/kidney_model.pkl"
+  },
+  "heart": {
+    "accuracy": 0.8333333333333334,
+    "f1": 0.8163265306122449,
+    "num_classes": 2,
+    "feature_columns": [
+      "Age",
+      "Sex",
+      "Chest pain type",
+      "BP",
+      "Cholesterol",
+      "FBS over 120",
+      "EKG results",
+      "Max HR",
+      "Exercise angina",
+      "ST depression",
+      "Slope of ST",
+      "Number of vessels fluro",
+      "Thallium"
+    ],
+    "label_mapping": {
+      "Absence": 0,
+      "Presence": 1
+    },
+    "file_path": "models/heart_model.pkl"
+  },
+  "supplement": {
+    "accuracy": 0.72,
+    "f1": 0.7184744142855088,
+    "num_classes": 5,
+    "feature_columns": [
+      "Age",
+      "Gender",
+      "Supplement",
+      "Weeks",
+      "Initial_WT",
+      "Final_WT",
+      "Strength_Gain"
+    ],
+    "label_mapping": {
+      "Bone Density": 0,
+      "Cognitive Support": 1,
+      "Muscle Recovery": 2,
+      "Strength Gain": 3,
+      "Weight Gain": 4
+    },
+    "file_path": "models/supplement_model.pkl"
+  },
+  "diet_recommendation": {
+    "accuracy": 0.93,
+    "f1": 0.9272979634281393,
+    "num_classes": 6,
+    "feature_columns": [
+      "Age",
+      "Gender",
+      "Weight_kg",
+      "Height_cm",
+      "BMI",
+      "Disease_Type",
+      "Severity",
+      "Physical_Activity_Level",
+      "Daily_Caloric_Intake",
+      "Cholesterol_mg/dL",
+      "Blood_Pressure_mmHg",
+      "Glucose_mg/dL",
+      "Dietary_Restrictions",
+      "Allergies",
+      "Preferred_Cuisine",
+      "Weekly_Exercise_Hours",
+      "Adherence_to_Diet_Plan",
+      "Dietary_Nutrient_Imbalance_Score"
+    ],
+    "label_mapping": {
+      "Balanced": 0,
+      "High_Fiber": 1,
+      "High_Protein": 2,
+      "Low_Carb": 3,
+      "Low_Fat": 4,
+      "Low_Sodium": 5
+    },
+    "file_path": "models/diet_recommendation_model.pkl"
+  }
+}
