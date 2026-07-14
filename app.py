@@ -1280,6 +1280,13 @@ if "show_more_clicked" not in st.session_state:
 if "user_profile" not in st.session_state:
     st.session_state.user_profile = {}
 
+with st.spinner("🔄 Warming up retrieval & embedding models (first load may take a moment)..."):
+    try:
+        get_bm25_index()
+        get_vector_index()
+    except Exception:
+        pass  # surfaced per-query instead, via run_full_pipeline's error banner
+
 render_hero()
 
 render_sidebar_brand()
