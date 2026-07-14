@@ -1280,15 +1280,6 @@ if "show_more_clicked" not in st.session_state:
 if "user_profile" not in st.session_state:
     st.session_state.user_profile = {}
 
-with st.spinner("🔄 Warming up retrieval & embedding models (first load may take a moment)..."):
-    try:
-        get_bm25_index()
-        get_vector_index()
-    except Exception:
-        pass  # surfaced per-query instead, via run_full_pipeline's error banner
-
-render_hero()
-
 render_sidebar_brand()
 nav_choice = st.sidebar.radio(
     "Select Interface View:",
@@ -1301,6 +1292,24 @@ nav_choice = st.sidebar.radio(
         "🏗️ System Blueprint & WBS Timeline",
     ],
 )
+
+# Retrieval indexes are only needed by views that actually search the corpus —
+# skip the warm-up cost entirely for the static Profile/Blueprint pages.
+RETRIEVAL_VIEWS = {
+    "🔍 QA Pipeline & Query Interface",
+    "📊 Evaluation & Trust Analytics",
+    "🛡️ Guardrail & Rejected Results Panel",
+    "📚 Corpus & Dataset Inventory",
+}
+if nav_choice in RETRIEVAL_VIEWS:
+    with st.spinner("🔄 Warming up retrieval & embedding models (first load may take a moment)..."):
+        try:
+            get_bm25_index()
+            get_vector_index()
+        except Exception:
+            pass  # surfaced per-query instead, via run_full_pipeline's error banner
+
+render_hero()
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("👤 User Health Profile")
