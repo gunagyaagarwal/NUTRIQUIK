@@ -4,6 +4,7 @@ import html
 import os
 import re
 import sys
+import urllib.parse
 
 import pandas as pd
 import streamlit as st
@@ -158,9 +159,11 @@ def inject_custom_css():
         .main .block-container,
         [data-testid="stMainBlockContainer"],
         [data-testid="stAppViewBlockContainer"] {
-            max-width: 1180px;
+            max-width: 1400px;
+            width: 100%;
             padding-top: 0rem !important;
             padding-bottom: 2.5rem;
+            transition: max-width 0.25s ease;
         }
         div[data-testid="stVerticalBlock"] > div:first-child {
             margin-top: 0 !important;
@@ -481,6 +484,18 @@ def inject_custom_css():
             color: #64748B;
             line-height: 1.8;
         }
+        .nq-footer-brand {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            margin-bottom: 0.3rem;
+            color: #F8FAFC;
+        }
+        .nq-footer-leaf {
+            width: 20px;
+            height: 20px;
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -556,21 +571,26 @@ def render_hero():
     )
 
 
+def _leaf_svg(gradient_id, css_class=""):
+    class_attr = f' class="{css_class}"' if css_class else ""
+    return (
+        f'<svg{class_attr} viewBox="0 0 64 64" role="img" aria-label="NutriQuik leaf">'
+        f'<defs><linearGradient id="{gradient_id}" x1="0" x2="1" y1="0" y2="1">'
+        '<stop offset="0%" stop-color="#2DD4BF"/><stop offset="100%" stop-color="#0891B2"/>'
+        '</linearGradient></defs>'
+        f'<path fill="url(#{gradient_id})" d="M52 7C31 9 14 19 9 35c-2 8 2 16 9 19 9 4 20-1 25-11 6-12 7-24 9-36Z"/>'
+        '<path fill="#22D3EE" opacity=".9" d="M11 55c11-11 21-21 35-34" stroke="#22D3EE" stroke-width="5" stroke-linecap="round"/>'
+        '</svg>'
+    )
+
+
 def _sidebar_logo_html():
     logo_path = os.path.join(BASE_DIR, "assets", "logo.png")
     if os.path.exists(logo_path):
         with open(logo_path, "rb") as f:
             logo_b64 = base64.b64encode(f.read()).decode()
         return f'<img class="nq-brand-logo" src="data:image/png;base64,{logo_b64}" alt="NutriQuik logo">'
-    return (
-        '<svg class="nq-brand-logo" viewBox="0 0 64 64" role="img" aria-label="NutriQuik leaf">'
-        '<defs><linearGradient id="leafGradient" x1="0" x2="1" y1="0" y2="1">'
-        '<stop offset="0%" stop-color="#2DD4BF"/><stop offset="100%" stop-color="#0891B2"/>'
-        '</linearGradient></defs>'
-        '<path fill="url(#leafGradient)" d="M52 7C31 9 14 19 9 35c-2 8 2 16 9 19 9 4 20-1 25-11 6-12 7-24 9-36Z"/>'
-        '<path fill="#22D3EE" opacity=".9" d="M11 55c11-11 21-21 35-34" stroke="#22D3EE" stroke-width="5" stroke-linecap="round"/>'
-        '</svg>'
-    )
+    return _leaf_svg("leafGradientSidebar", "nq-brand-logo")
 
 
 def render_sidebar_brand():
@@ -584,15 +604,16 @@ def render_sidebar_brand():
 
 
 def render_footer():
-    st.markdown(
-        """
-        <div class="nq-footer">
-            <strong>NUTRIQUIK</strong> &copy; 2025-2026 | Jaypee Institute of Information Technology (JIIT)<br>
-            Team: Gunagya Agarwal &bull; Mridul Rai &bull; Suryansh Singh &bull; Pranav S Nair &bull; Pulkit Sukhija
-        </div>
-        """,
-        unsafe_allow_html=True,
+    footer_html = (
+        '<div class="nq-footer">'
+        '<div class="nq-footer-brand">'
+        + _leaf_svg("leafGradientFooter", "nq-footer-leaf")
+        + '<strong>NUTRIQUIK</strong></div>'
+        '&copy; 2025-2026 | Jaypee Institute of Information Technology (JIIT)<br>'
+        'Team: Gunagya Agarwal &bull; Mridul Rai &bull; Suryansh Singh &bull; Pranav S Nair &bull; Pulkit Sukhija'
+        '</div>'
     )
+    st.markdown(footer_html, unsafe_allow_html=True)
 
 
 @st.cache_resource
@@ -1364,7 +1385,8 @@ def render_blueprint_view():
 # ------------------------------------------------------------------------------
 # APP
 # ------------------------------------------------------------------------------
-st.set_page_config(page_title="NutriQuik", page_icon="🧬", layout="wide")
+_FAVICON_DATA_URI = "data:image/svg+xml," + urllib.parse.quote(_leaf_svg("leafGradientFavicon"))
+st.set_page_config(page_title="NutriQuik", page_icon=_FAVICON_DATA_URI, layout="wide")
 inject_custom_css()
 
 if "last_query" not in st.session_state:
