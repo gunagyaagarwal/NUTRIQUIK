@@ -199,7 +199,8 @@ def inject_custom_css():
             height: 48px;
             flex-shrink: 0;
             border-radius: 10px;
-            object-fit: cover;
+            object-fit: contain;
+            background: #0B0F17;
             filter: drop-shadow(0 8px 18px rgba(20, 184, 166, 0.28));
         }
         .nq-sidebar-title {
@@ -561,30 +562,25 @@ def _sidebar_logo_html():
         with open(logo_path, "rb") as f:
             logo_b64 = base64.b64encode(f.read()).decode()
         return f'<img class="nq-brand-logo" src="data:image/png;base64,{logo_b64}" alt="NutriQuik logo">'
-    return """
-        <svg class="nq-brand-logo" viewBox="0 0 64 64" role="img" aria-label="NutriQuik leaf">
-            <defs>
-                <linearGradient id="leafGradient" x1="0" x2="1" y1="0" y2="1">
-                    <stop offset="0%" stop-color="#2DD4BF"/>
-                    <stop offset="100%" stop-color="#0891B2"/>
-                </linearGradient>
-            </defs>
-            <path fill="url(#leafGradient)" d="M52 7C31 9 14 19 9 35c-2 8 2 16 9 19 9 4 20-1 25-11 6-12 7-24 9-36Z"/>
-            <path fill="#22D3EE" opacity=".9" d="M11 55c11-11 21-21 35-34" stroke="#22D3EE" stroke-width="5" stroke-linecap="round"/>
-        </svg>
-        """
+    return (
+        '<svg class="nq-brand-logo" viewBox="0 0 64 64" role="img" aria-label="NutriQuik leaf">'
+        '<defs><linearGradient id="leafGradient" x1="0" x2="1" y1="0" y2="1">'
+        '<stop offset="0%" stop-color="#2DD4BF"/><stop offset="100%" stop-color="#0891B2"/>'
+        '</linearGradient></defs>'
+        '<path fill="url(#leafGradient)" d="M52 7C31 9 14 19 9 35c-2 8 2 16 9 19 9 4 20-1 25-11 6-12 7-24 9-36Z"/>'
+        '<path fill="#22D3EE" opacity=".9" d="M11 55c11-11 21-21 35-34" stroke="#22D3EE" stroke-width="5" stroke-linecap="round"/>'
+        '</svg>'
+    )
 
 
 def render_sidebar_brand():
-    st.sidebar.markdown(
-        f"""
-        <div class="nq-brand-row">
-            {_sidebar_logo_html()}
-            <div class="nq-sidebar-title">NUTRIQUIK<br>Control Panel</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    row_html = (
+        '<div class="nq-brand-row">'
+        + _sidebar_logo_html()
+        + '<div class="nq-sidebar-title">NUTRIQUIK<br>Control Panel</div>'
+        + "</div>"
     )
+    st.sidebar.markdown(row_html, unsafe_allow_html=True)
 
 
 def render_footer():
