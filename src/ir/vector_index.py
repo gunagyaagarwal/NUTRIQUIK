@@ -10,7 +10,11 @@ if BASE_DIR not in sys.path:
 
 from src.ir.bm25 import load_documents  # noqa: E402
 
-MODEL_NAME = "all-MiniLM-L6-v2"
+# fastembed's ONNX runtime build of the same MiniLM model, used instead of
+# sentence-transformers/torch — same embeddings, a fraction of the memory
+# footprint (torch alone can be 500MB-1GB just to import), which matters on
+# resource-constrained free hosting tiers (e.g. Streamlit Community Cloud).
+MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 MODELS_DIR = os.path.join(BASE_DIR, "models")
 EMBEDDINGS_PATH = os.path.join(MODELS_DIR, "doc_embeddings.npy")
 DOC_IDS_PATH = os.path.join(MODELS_DIR, "doc_ids.json")
@@ -18,11 +22,23 @@ DOC_IDS_PATH = os.path.join(MODELS_DIR, "doc_ids.json")
 _model = None
 
 
+class _FastEmbedModel:
+    """Thin wrapper matching the .encode(...) interface the rest of this
+    codebase already uses, so hybrid.py/vector_index.py callers don't need
+    to change. fastembed's ONNX MiniLM output is already L2-normalized."""
+
+    def __init__(self, model_name):
+        from fastembed import TextEmbedding
+        self._model = TextEmbedding(model_name=model_name)
+
+    def encode(self, texts, show_progress_bar=False, normalize_embeddings=True):
+        return np.array(list(self._model.embed(list(texts))))
+
+
 def get_model():
     global _model
     if _model is None:
-        from sentence_transformers import SentenceTransformer
-        _model = SentenceTransformer(MODEL_NAME)
+        _model = _FastEmbedModel(MODEL_NAME)
     return _model
 
 
