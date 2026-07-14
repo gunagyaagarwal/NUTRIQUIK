@@ -1,10 +1,21 @@
+---
+title: NutriQuik
+emoji: 🧬
+colorFrom: blue
+colorTo: green
+sdk: streamlit
+sdk_version: "1.57.0"
+app_file: app.py
+pinned: false
+---
+
 # NutriQuik
 
 An intelligent question-answering system for nutrition and immunology, built around three query tracks:
 
 - **Factual** — BM25 (from scratch) + MiniLM semantic hybrid retrieval returns the single best-matching reference, with optional Gemini LLM refinement.
 - **Advisory** — the same hybrid retrieval returns top-5 candidates, scored by a 9-feature heuristic trust model and filtered by a 0.50 guardrail threshold.
-- **Prediction** — 9 trained XGBoost models (anemia, diabetes, heart, liver, kidney, hypothyroid, vitamin deficiency, supplement benefit, diet recommendation) with real SHAP explanations.
+- **Prediction** — 7 trained XGBoost models (anemia, diabetes, heart, kidney, vitamin deficiency, supplement benefit, diet recommendation) with real SHAP explanations.
 
 A regex + TF-IDF/LogisticRegression query guard blocks harmful or off-domain questions before any retrieval runs.
 
@@ -25,7 +36,7 @@ First launch builds and caches the MiniLM document embeddings (`models/doc_embed
 2. **Evaluation & Trust Analytics** — real IR metrics (BM25 vs hybrid) and XGBoost model metrics, from `models/eval_results.json`
 3. **Guardrail & Rejected Results Panel** — live guardrail tester + sample rejected low-trust results
 4. **Profile & Interaction Matrix** — user profile + curated nutrient-drug interaction reference
-5. **Corpus & Dataset Inventory** — the 378-document IR corpus and the 9-model registry
+5. **Corpus & Dataset Inventory** — the 384-document IR corpus and the 7-model registry
 6. **System Blueprint & WBS Timeline** — architecture diagram and project plan
 
 ## Structure
