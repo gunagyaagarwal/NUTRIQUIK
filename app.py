@@ -1,3 +1,4 @@
+import base64
 import json
 import html
 import os
@@ -187,18 +188,26 @@ def inject_custom_css():
             color: #F8FAFC !important;
             border-radius: 8px !important;
         }
-        .nq-leaf-logo {
-            width: 58px;
-            height: 58px;
+        .nq-brand-row {
+            display: flex;
+            align-items: center;
+            gap: 0.9rem;
             margin: 1rem 0 1.6rem;
+        }
+        .nq-brand-logo {
+            width: 48px;
+            height: 48px;
+            flex-shrink: 0;
+            border-radius: 10px;
+            object-fit: cover;
             filter: drop-shadow(0 8px 18px rgba(20, 184, 166, 0.28));
         }
         .nq-sidebar-title {
-            font-size: 1.18rem;
+            font-size: 1.05rem;
             font-weight: 800;
-            line-height: 1.35;
-            margin-bottom: 1.2rem;
+            line-height: 1.3;
             color: #FFFFFF;
+            margin: 0;
         }
         .nq-profile-note {
             background: #214664;
@@ -294,11 +303,20 @@ def inject_custom_css():
             padding: 0.62rem 1.05rem;
             font-weight: 800;
             box-shadow: none;
+            transition: background 0.18s ease, border-color 0.18s ease, transform 0.12s ease;
         }
         div.stButton > button:hover {
             color: #FFFFFF;
             border-color: #16B8D9;
             background: #152034;
+            transform: translateY(-1px);
+        }
+        div.stButton > button:active {
+            transform: translateY(0);
+        }
+        div.stButton > button:focus-visible {
+            outline: 2px solid #22D3EE;
+            outline-offset: 2px;
         }
         div.stButton > button[kind="primary"] {
             background: #FF4B4B;
@@ -310,22 +328,84 @@ def inject_custom_css():
             border-color: #F43F5E;
         }
         div[data-testid="stAlert"] {
-            border-radius: 8px;
+            border-radius: 10px;
         }
         div[data-testid="stDataFrame"] {
-            border-radius: 8px;
+            border-radius: 10px;
             overflow: hidden;
         }
         .stProgress > div > div > div > div {
             background: linear-gradient(90deg, #06B6D4, #22C55E);
         }
+        div[data-testid="stTextInput"] input,
+        div[data-testid="stNumberInput"] input,
+        div[data-baseweb="select"] > div {
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        div[data-testid="stTextInput"] input:focus,
+        div[data-testid="stNumberInput"] input:focus,
+        div[data-baseweb="select"]:focus-within > div {
+            border-color: #22D3EE !important;
+            box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.15) !important;
+        }
+        .st-key-query_bar_container div[data-testid="stTextInput"] input {
+            background: #0B2318 !important;
+            border: 1.5px solid #22C55E !important;
+            color: #F0FDF4 !important;
+            font-weight: 600;
+        }
+        .st-key-query_bar_container div[data-testid="stTextInput"] input:focus {
+            border-color: #4ADE80 !important;
+            box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.2) !important;
+        }
+        .st-key-query_bar_container div[data-testid="stTextInput"] label {
+            color: #4ADE80 !important;
+        }
+        [data-testid="stSidebar"] div[role="radiogroup"] label {
+            border-radius: 8px;
+            padding: 0.45rem 0.6rem;
+            transition: background 0.15s ease;
+        }
+        [data-testid="stSidebar"] div[role="radiogroup"] label:hover {
+            background: rgba(56, 189, 248, 0.08);
+        }
+        [data-testid="stSidebar"] div[role="radiogroup"] label[data-checked="true"] {
+            background: rgba(34, 211, 238, 0.12);
+        }
+        [data-testid="stExpander"] {
+            border: 1px solid #2A2E3A;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        [data-testid="stExpander"] summary {
+            font-weight: 700;
+        }
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #12161F;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #343A46;
+            border-radius: 8px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #454B5C;
+        }
         .nq-card {
             border: 1px solid #155A4E;
-            border-radius: 8px;
+            border-radius: 12px;
             padding: 1.1rem 1.25rem;
             margin: 0.75rem 0 1.15rem;
             background: #073F2E;
             box-shadow: 0 12px 26px rgba(0, 0, 0, 0.18);
+            transition: transform 0.18s ease, box-shadow 0.18s ease;
+        }
+        .nq-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
         }
         .nq-card-title {
             color: #4ADE80;
@@ -373,8 +453,14 @@ def inject_custom_css():
             background: #12161F;
             border: 1px solid #2A2E3A;
             padding: 1rem 1.2rem;
-            border-radius: 10px;
+            border-radius: 12px;
             text-align: center;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.16);
+            transition: transform 0.18s ease, border-color 0.18s ease;
+        }
+        .nq-metric-box:hover {
+            transform: translateY(-2px);
+            border-color: #3F414D;
         }
         .nq-metric-value {
             font-size: 1.7rem;
@@ -469,10 +555,14 @@ def render_hero():
     )
 
 
-def render_sidebar_brand():
-    st.sidebar.markdown(
-        """
-        <svg class="nq-leaf-logo" viewBox="0 0 64 64" role="img" aria-label="NutriQuik leaf">
+def _sidebar_logo_html():
+    logo_path = os.path.join(BASE_DIR, "assets", "logo.png")
+    if os.path.exists(logo_path):
+        with open(logo_path, "rb") as f:
+            logo_b64 = base64.b64encode(f.read()).decode()
+        return f'<img class="nq-brand-logo" src="data:image/png;base64,{logo_b64}" alt="NutriQuik logo">'
+    return """
+        <svg class="nq-brand-logo" viewBox="0 0 64 64" role="img" aria-label="NutriQuik leaf">
             <defs>
                 <linearGradient id="leafGradient" x1="0" x2="1" y1="0" y2="1">
                     <stop offset="0%" stop-color="#2DD4BF"/>
@@ -482,7 +572,16 @@ def render_sidebar_brand():
             <path fill="url(#leafGradient)" d="M52 7C31 9 14 19 9 35c-2 8 2 16 9 19 9 4 20-1 25-11 6-12 7-24 9-36Z"/>
             <path fill="#22D3EE" opacity=".9" d="M11 55c11-11 21-21 35-34" stroke="#22D3EE" stroke-width="5" stroke-linecap="round"/>
         </svg>
-        <div class="nq-sidebar-title">NUTRIQUIK Control<br>Panel</div>
+        """
+
+
+def render_sidebar_brand():
+    st.sidebar.markdown(
+        f"""
+        <div class="nq-brand-row">
+            {_sidebar_logo_html()}
+            <div class="nq-sidebar-title">NUTRIQUIK<br>Control Panel</div>
+        </div>
         """,
         unsafe_allow_html=True,
     )
@@ -965,7 +1064,8 @@ def render_qa_pipeline_view(ai_refine_enabled):
                   args=("How to use bleach detox to kill viruses?",))
 
     st.session_state.setdefault("query_input", "What is the role of Vitamin D in respiratory immunity?")
-    user_query = st.text_input("Enter your nutrition/immunology query:", key="query_input")
+    with st.container(key="query_bar_container"):
+        user_query = st.text_input("Enter your nutrition/immunology query:", key="query_input")
     search_triggered = st.button("🚀 Process Query", type="primary")
 
     if not (user_query or search_triggered):
