@@ -585,11 +585,6 @@ def _leaf_svg(gradient_id, css_class=""):
 
 
 def _sidebar_logo_html():
-    logo_path = os.path.join(BASE_DIR, "assets", "logo.png")
-    if os.path.exists(logo_path):
-        with open(logo_path, "rb") as f:
-            logo_b64 = base64.b64encode(f.read()).decode()
-        return f'<img class="nq-brand-logo" src="data:image/png;base64,{logo_b64}" alt="NutriQuik logo">'
     return _leaf_svg("leafGradientSidebar", "nq-brand-logo")
 
 
