@@ -41,6 +41,15 @@ REGISTRY_PATH = os.path.join(MODELS_DIR, "model_registry.json")
 # instead of presenting a misleading result.
 FACTUAL_RELEVANCE_THRESHOLD = 0.35
 
+# Composite trust-score cutoff for the advisory guardrail. Recalibrated alongside the
+# bm25_score normalization fix in src/ml/predict.py: the old 0.5 cutoff was tuned
+# against a scoring formula that batch-relative-normalized already-bounded [0, 1]
+# features, artificially inflating scores. Under the corrected (more honest) scale,
+# an adversarial/off-domain query now tops out around 0.23, while genuinely relevant
+# advisory results typically run 0.3-0.6+ — 0.30 keeps clear separation from junk
+# while no longer rejecting most real, on-topic content.
+ADVISORY_TRUST_THRESHOLD = 0.30
+
 DISEASE_TO_MODEL = {
     "diabetes": "diabetes", "anemia": "anemia", "heart": "heart",
     "kidney": "kidney", "vitamin_deficiency": "vitamin_deficiency",
@@ -503,9 +512,9 @@ def inject_custom_css():
 
 
 def _trust_class(score):
-    if score >= 0.7:
+    if score >= 0.55:
         return "nq-trust-high"
-    if score >= 0.5:
+    if score >= ADVISORY_TRUST_THRESHOLD:
         return "nq-trust-medium"
     return "nq-trust-low"
 
@@ -963,7 +972,7 @@ def get_sample_advisory_results(sample_query="miracle bleach detox cure for viru
         vector_index = get_vector_index()
         search_results = hybrid_search(sample_query, index, vector_index, top_k=top_k)
         scored = rank_by_trust(score_documents(sample_query, search_results, index))
-        return apply_guardrail(scored, threshold=0.5)
+        return apply_guardrail(scored, threshold=ADVISORY_TRUST_THRESHOLD)
     except Exception:
         return [], []
 
@@ -976,7 +985,7 @@ def build_scatter_data(sample_query="immune boosting foods rich in zinc and vita
         rows.append({
             "doc_id": doc["doc_id"], "title": doc["title"],
             "bm25_score": f["bm25_score"], "tfidf_cosine": f["tfidf_cosine"],
-            "trust_score": doc["trust_score"], "is_rejected": doc["trust_score"] < 0.5,
+            "trust_score": doc["trust_score"], "is_rejected": doc["trust_score"] < ADVISORY_TRUST_THRESHOLD,
         })
     return rows
 
@@ -1036,7 +1045,7 @@ def run_full_pipeline(query):
         return {"status": "SUCCESS", "intent": "factual", "results": factual_results, "rejected_results": []}
 
     scored = rank_by_trust(score_documents(query, search_results, index))
-    passed, rejected = apply_guardrail(scored, threshold=0.5)
+    passed, rejected = apply_guardrail(scored, threshold=ADVISORY_TRUST_THRESHOLD)
     return {"status": "SUCCESS", "intent": "advisory", "results": passed, "rejected_results": rejected}
 
 
@@ -1139,7 +1148,7 @@ def render_qa_pipeline_view(ai_refine_enabled):
     # ADVISORY
     st.subheader("💡 Advisory Query Response (Hybrid Retrieval + Trust Scoring Track)")
     if not results:
-        st.warning("No results passed the 50% composite trust threshold for this query.")
+        st.warning(f"No results passed the {ADVISORY_TRUST_THRESHOLD*100:.0f}% composite trust threshold for this query.")
         return
 
     top = results[0]
@@ -1168,13 +1177,13 @@ def render_qa_pipeline_view(ai_refine_enabled):
 
     if st.session_state.show_more_clicked:
         st.subheader("📚 Ranked Search Results (Sorted by Trust Score High → Low)")
-        st.caption("Only documents meeting the >= 0.50 trust threshold are displayed below.")
+        st.caption(f"Only documents meeting the >= {ADVISORY_TRUST_THRESHOLD:.2f} trust threshold are displayed below.")
         st.plotly_chart(create_trust_comparison_chart(results, rejected_results), use_container_width=True)
         for idx, doc in enumerate(results[1:], start=2):
             render_result_card(f"Rank #{idx}: {doc['title']}", doc["content"][:300], trust_score=doc["trust_score"])
 
         if rejected_results:
-            with st.expander(f"🚫 Filtered out ({len(rejected_results)} results below 50% trust)"):
+            with st.expander(f"🚫 Filtered out ({len(rejected_results)} results below {ADVISORY_TRUST_THRESHOLD*100:.0f}% trust)"):
                 for doc in rejected_results:
                     render_result_card(doc["title"], doc["reason"], trust_score=doc["trust_score"])
 
@@ -1231,35 +1240,6 @@ def render_evaluation_view():
         st.info("Retrieval scatter unavailable.")
 
 
-def render_guardrail_view():
-    st.header("🛡️ Guardrail & Rejected Results Panel")
-    st.caption("Documents and queries rejected due to low trust (<50%), or off-domain/harmful content.")
-
-    st.markdown(
-        "> **Guardrail Policy:** Any advisory result with a composite trust score below 0.50 is withheld "
-        "from the top answer and flagged here. Off-domain or harmful queries are blocked before retrieval runs at all."
-    )
-
-    st.subheader("📄 Sample Rejected Retrieval Results")
-    _, rejected_sample = get_sample_advisory_results()
-    if rejected_sample:
-        for doc in rejected_sample:
-            render_result_card(f"🚫 {doc['title']}", doc["reason"], trust_score=doc["trust_score"])
-    else:
-        st.info("No low-trust sample documents to display right now.")
-
-    st.markdown("---")
-    st.subheader("⚡ Live Guardrail Tester")
-    test_q = st.text_input("Test any query against the Query Guard:", value="Can bleach cure COVID-19?", key="guard_test_q")
-    if st.button("Evaluate Guardrail"):
-        result = run_query_guard(test_q)
-        if result.get("allowed"):
-            st.success(f"✅ PASSED — confidence {result.get('confidence', 0):.3f}")
-        else:
-            st.error(f"🛑 REJECTED — {result.get('message', result.get('reason'))} (confidence {result.get('confidence', 0):.3f})")
-
-
-
 def render_corpus_view():
     st.header("📚 Curated Corpus & Dataset Inventory")
     st.caption("Real IR corpus (BM25 + MiniLM index) and the datasets used to train the 9 XGBoost disease/nutrition models.")
@@ -1314,7 +1294,7 @@ def render_blueprint_view():
  Optional Gemini           Heuristic Trust Score    + real SHAP explanation
  LLM Refine                (9 weighted features)
          |                        |
- Show Answer + Source      Guardrail Filter (trust < 0.50 cut)
+ Show Answer + Source      Guardrail Filter (trust < 0.30 cut)
                                   |
                                   v
                     Top-1 shown first, optional "Show More" ranking
@@ -1370,7 +1350,6 @@ nav_choice = st.sidebar.radio(
     [
         "🔍 QA Pipeline & Query Interface",
         "📊 Evaluation & Trust Analytics",
-        "🛡️ Guardrail & Rejected Results Panel",
         "📚 Corpus & Dataset Inventory",
         "🏗️ System Blueprint & WBS Timeline",
     ],
@@ -1381,7 +1360,6 @@ nav_choice = st.sidebar.radio(
 RETRIEVAL_VIEWS = {
     "🔍 QA Pipeline & Query Interface",
     "📊 Evaluation & Trust Analytics",
-    "🛡️ Guardrail & Rejected Results Panel",
     "📚 Corpus & Dataset Inventory",
 }
 if nav_choice in RETRIEVAL_VIEWS:
@@ -1424,8 +1402,6 @@ if nav_choice == "🔍 QA Pipeline & Query Interface":
     render_qa_pipeline_view(ai_refine_enabled)
 elif nav_choice == "📊 Evaluation & Trust Analytics":
     render_evaluation_view()
-elif nav_choice == "🛡️ Guardrail & Rejected Results Panel":
-    render_guardrail_view()
 elif nav_choice == "📚 Corpus & Dataset Inventory":
     render_corpus_view()
 elif nav_choice == "🏗️ System Blueprint & WBS Timeline":

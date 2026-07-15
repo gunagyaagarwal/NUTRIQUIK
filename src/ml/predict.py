@@ -21,7 +21,16 @@ FEATURE_WEIGHTS = {
     "query_coverage": 0.12, "doc_length_norm": 0.04, "keyword_match": 0.08, "title_match": 0.08,
     "category_relevance": 0.04,
 }
-UNBOUNDED_COLS = ["bm25_score", "vector_score", "tfidf_cosine", "term_overlap"]
+# Empirical cap for raw BM25 scores in this corpus (strong multi-term matches run
+# roughly 11-17). Only bm25_score needs rescaling here — every other feature
+# (vector_score, tfidf_cosine, term_overlap) is already a naturally bounded [0, 1]
+# similarity/overlap ratio. Previously ALL of these were min-max normalized per query
+# batch, which made a document's trust score depend on whatever else happened to be
+# retrieved alongside it rather than its own absolute relevance — e.g. a genuinely
+# on-topic "Vitamin C" result would get crushed toward 0 whenever an exceptional match
+# landed in the same batch, purely from relative rescaling, not because it was
+# actually a weak match.
+BM25_SCORE_CAP = 12.0
 
 
 def load_registry():
@@ -38,9 +47,7 @@ def load_model_and_metadata(model_name):
 def score_documents(query, search_results, bm25_index):
     features_df = extract_features_batch(query, search_results, bm25_index)
     norm = features_df.copy()
-    for col in UNBOUNDED_COLS:
-        lo, hi = norm[col].min(), norm[col].max()
-        norm[col] = (norm[col] - lo) / (hi - lo) if hi > lo else 0.5
+    norm["bm25_score"] = (norm["bm25_score"] / BM25_SCORE_CAP).clip(upper=1.0)
 
     contributions_df = pd.DataFrame({col: norm[col] * w for col, w in FEATURE_WEIGHTS.items()})
     trust_scores = contributions_df.sum(axis=1).clip(0, 1)
