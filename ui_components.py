@@ -124,21 +124,3 @@ def create_trust_comparison_chart(results, rejected):
     return fig
 
 
-def create_interaction_matrix_chart(interactions):
-    df = pd.DataFrame(interactions)
-    colors = []
-    for t in df["type"]:
-        if t == "Synergy":
-            colors.append("#DCFCE7")
-        elif t == "Contraindication":
-            colors.append("#FEE2E2")
-        else:
-            colors.append("#FEF3C7")
-    fig = go.Figure(data=[go.Table(
-        header=dict(values=["Nutrient / Agent", "Biological Target", "Interaction Type", "Clinical Mechanism"],
-                    fill_color='#1E293B', font=dict(color='white', size=13), align='left'),
-        cells=dict(values=[df['nutrient'], df['target'], df['type'], df['detail']],
-                   fill_color=[colors, colors, colors, colors], font=dict(color='#0F172A', size=12), align='left'))
-    ])
-    fig.update_layout(height=280, margin=dict(l=10, r=10, t=20, b=10))
-    return fig

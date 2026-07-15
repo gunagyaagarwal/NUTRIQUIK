@@ -29,7 +29,7 @@ from src.ui.charts import (  # noqa: E402
 from ui_components import (  # noqa: E402
     create_trust_gauge, create_evidence_pyramid, create_retrieval_scatter,
     create_shap_chart, create_ir_metrics_chart, create_ml_metrics_chart,
-    create_interaction_matrix_chart, create_trust_comparison_chart,
+    create_trust_comparison_chart,
 )
 
 MODELS_DIR = os.path.join(BASE_DIR, "models")
@@ -949,23 +949,6 @@ def render_metric_box(value, label):
     )
 
 
-def get_interaction_matrix():
-    return [
-        {"nutrient": "Vitamin D3", "target": "T-Cell Immunity", "type": "Synergy",
-         "detail": "Promotes anti-inflammatory immune tolerance"},
-        {"nutrient": "Zinc", "target": "Viral Polymerase", "type": "Inhibition",
-         "detail": "Inhibits viral replication when taken within 24h of symptoms"},
-        {"nutrient": "Vitamin K2", "target": "Warfarin / Anticoagulants", "type": "Contraindication",
-         "detail": "High risk: Antagonizes Warfarin activity, alters INR"},
-        {"nutrient": "High-dose Iron", "target": "Zinc Absorption", "type": "Competition",
-         "detail": "Competes for intestinal DMT1 transporters"},
-        {"nutrient": "Omega-3 (EPA/DHA)", "target": "NF-kB Pathway", "type": "Synergy",
-         "detail": "Downregulates IL-6 and TNF-alpha expression"},
-        {"nutrient": "Vitamin C", "target": "Iron Absorption", "type": "Synergy",
-         "detail": "Converts ferric (Fe3+) to ferrous (Fe2+) for enhanced uptake"},
-    ]
-
-
 def load_eval_results():
     try:
         with open(os.path.join(MODELS_DIR, "eval_results.json")) as f:
@@ -1276,25 +1259,6 @@ def render_guardrail_view():
             st.error(f"🛑 REJECTED — {result.get('message', result.get('reason'))} (confidence {result.get('confidence', 0):.3f})")
 
 
-def render_profile_view(user_name, user_age, user_gender):
-    st.header("💊 Personalised Profile & Interaction Matrix")
-    st.caption("Nutrient-condition-medication interactions and contraindications.")
-
-    st.subheader(f"Current Profile: {user_name or 'Not set'}")
-    st.markdown(
-        f"**Gender:** {user_gender or 'Not set'} | "
-        f"**Age:** {f'{user_age} yrs' if user_age is not None else 'Not set'}"
-    )
-
-    st.markdown("---")
-    st.subheader("⚡ Nutrient-Drug Interaction Matrix")
-    st.plotly_chart(create_interaction_matrix_chart(get_interaction_matrix()), use_container_width=True)
-
-    st.warning(
-        "⚠️ **Clinical Warning:** High-dose Vitamin K2 antagonizes Warfarin anticoagulation. "
-        "Consult a healthcare provider before starting supplements."
-    )
-
 
 def render_corpus_view():
     st.header("📚 Curated Corpus & Dataset Inventory")
@@ -1421,14 +1385,13 @@ nav_choice = st.sidebar.radio(
         "🔍 QA Pipeline & Query Interface",
         "📊 Evaluation & Trust Analytics",
         "🛡️ Guardrail & Rejected Results Panel",
-        "💊 Profile & Interaction Matrix",
         "📚 Corpus & Dataset Inventory",
         "🏗️ System Blueprint & WBS Timeline",
     ],
 )
 
 # Retrieval indexes are only needed by views that actually search the corpus —
-# skip the warm-up cost entirely for the static Profile/Blueprint pages.
+# skip the warm-up cost entirely for the static Blueprint page.
 RETRIEVAL_VIEWS = {
     "🔍 QA Pipeline & Query Interface",
     "📊 Evaluation & Trust Analytics",
@@ -1444,13 +1407,6 @@ if nav_choice in RETRIEVAL_VIEWS:
             pass  # surfaced per-query instead, via run_full_pipeline's error banner
 
 render_hero()
-
-st.sidebar.markdown("---")
-st.sidebar.subheader("👤 User Health Profile")
-user_name = st.sidebar.text_input("Name", value="", placeholder="Enter your name")
-user_age = st.sidebar.number_input("Age", min_value=18, max_value=100, value=None, placeholder="Enter your age")
-user_gender = st.sidebar.selectbox("Gender", ["Male", "Female", "Other"], index=None, placeholder="Select gender")
-st.sidebar.info("💡 User profile metadata is used for personalized health guidance.")
 
 st.sidebar.markdown("---")
 with st.sidebar.expander("🗂️ Your Session Profile"):
@@ -1484,8 +1440,6 @@ elif nav_choice == "📊 Evaluation & Trust Analytics":
     render_evaluation_view()
 elif nav_choice == "🛡️ Guardrail & Rejected Results Panel":
     render_guardrail_view()
-elif nav_choice == "💊 Profile & Interaction Matrix":
-    render_profile_view(user_name, user_age, user_gender)
 elif nav_choice == "📚 Corpus & Dataset Inventory":
     render_corpus_view()
 elif nav_choice == "🏗️ System Blueprint & WBS Timeline":
