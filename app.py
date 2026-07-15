@@ -1328,38 +1328,24 @@ def render_blueprint_view():
         "Phase": ["1. Requirements Analysis", "2. System Design", "3. Development", "4. Testing",
                   "5. Deployment", "6. Documentation"],
         "Activities": [
-            "Literature review, dataset identification, feature list",
-            "Architecture design, IR pipeline design, ML model selection",
-            "IR engine, trust scoring module, guardrail module, Streamlit UI",
-            "Integration testing, evaluation on ground-truth queries",
-            "Local/cloud hosting & deployment",
+            "Dataset collection and annotation, csv, IR evaluation (Precision, Recall)",
+            "Overall coordination, XGBoost trust-scoring model, model evaluation",
+            "Streamlit UI, Plotly visualisations (trust bars(accuracy)), graphs, ranking results / "
+            "Sparse retrieval (TF-IDF), dense retrieval (sentence-transformers), indexing",
+            "System integration, guardrail filter logic, testing",
+            "Cloud deployment",
             "Report writing, presentation preparation",
         ],
-        "Lead Member": ["Pulkit Sukhija", "Gunagya Agarwal", "Suryansh Singh / Mridul Rai",
-                         "Pranav S Nair", "Pranav S Nair", "Gunagya Agarwal"],
+        "Lead Member": [
+            "Pulkit Sukhija — Data & Evaluation Engineer",
+            "Gunagya Agarwal — Project Lead & ML Engineer",
+            "Suryansh Singh — Frontend/Backend & UI Developer / Mridul Rai — IR & Backend Support",
+            "Pranav S Nair — Integration, Testing & Deployment",
+            "Pranav S Nair — Integration, Testing & Deployment",
+            "Gunagya Agarwal — Project Lead & ML Engineer",
+        ],
     }
     st.table(pd.DataFrame(wbs_data))
-
-    st.markdown("---")
-    st.subheader("👥 Team Roles & Responsibilities")
-    team_roles_data = {
-        "Team Member": ["Gunagya Agarwal", "Mridul Rai", "Pulkit Sukhija", "Suryansh Singh", "Pranav S Nair"],
-        "Role": [
-            "Project Lead & ML Engineer",
-            "IR & Backend Support",
-            "Data & Evaluation Engineer",
-            "Frontend/Backend & UI Developer",
-            "Integration, Testing & Deployment",
-        ],
-        "Responsibilities": [
-            "Overall coordination, XGBoost trust-scoring model, model evaluation",
-            "Sparse retrieval (TF-IDF), dense retrieval (sentence-transformers), indexing",
-            "Dataset collection and annotation, csv, IR evaluation (Precision, Recall)",
-            "Streamlit UI, Plotly visualisations (trust bars(accuracy)), graphs, ranking results",
-            "System integration, guardrail filter logic, testing, cloud deployment",
-        ],
-    }
-    st.table(pd.DataFrame(team_roles_data))
 
 
 # ------------------------------------------------------------------------------
