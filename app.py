@@ -1376,6 +1376,27 @@ def render_blueprint_view():
     }
     st.table(pd.DataFrame(wbs_data))
 
+    st.markdown("---")
+    st.subheader("👥 Team Roles & Responsibilities")
+    team_roles_data = {
+        "Team Member": ["Gunagya Agarwal", "Mridul Rai", "Pulkit Sukhija", "Suryansh Singh", "Pranav S Nair"],
+        "Role": [
+            "Project Lead & ML Engineer",
+            "IR & Backend Support",
+            "Data & Evaluation Engineer",
+            "Frontend/Backend & UI Developer",
+            "Integration, Testing & Deployment",
+        ],
+        "Responsibilities": [
+            "Overall coordination, XGBoost trust-scoring model, model evaluation",
+            "Sparse retrieval (TF-IDF), dense retrieval (sentence-transformers), indexing",
+            "Dataset collection and annotation, csv, IR evaluation (Precision, Recall)",
+            "Streamlit UI, Plotly visualisations (trust bars(accuracy)), graphs, ranking results",
+            "System integration, guardrail filter logic, testing, cloud deployment",
+        ],
+    }
+    st.table(pd.DataFrame(team_roles_data))
+
 
 # ------------------------------------------------------------------------------
 # APP
