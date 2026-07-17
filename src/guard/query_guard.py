@@ -148,6 +148,17 @@ IN_DOMAIN_EXAMPLES = [
     "is avocado healthy", "avocado nutrition facts", "benefits of eating berries",
     "is watermelon good for hydration", "nutritional value of spinach", "benefits of eating broccoli",
     "is pineapple healthy", "benefits of citrus fruits", "healthiest fruits to eat",
+    # Common infections/conditions and lab-report shorthand (nutrition/immune support
+    # during illness and recovery, and interpreting basic blood work, are in-domain)
+    "covid 19", "what is covid", "diet during covid recovery", "foods to eat during covid",
+    "immunity boosting foods for covid", "what is malaria", "diet during malaria recovery",
+    "foods to eat during malaria", "what is dengue", "dengue fever symptoms",
+    "foods to eat during dengue fever", "platelet count in dengue", "what is chikungunya",
+    "chikungunya symptoms", "recovery diet for chikungunya", "what is asthma",
+    "asthma diet", "foods that trigger asthma", "asthma and nutrition",
+    "what is haemoglobin", "haemoglobin levels", "low haemoglobin symptoms",
+    "how to increase haemoglobin", "what is a cbc report", "cbc report", "cbc test results",
+    "understanding my cbc blood test",
 ]
 
 OUT_OF_DOMAIN_EXAMPLES = [
@@ -213,6 +224,10 @@ DOMAIN_KEYWORDS = [
     "blueberry", "raspberry", "melon", "pear", "plum", "peach", "apricot", "fig",
     "lemon", "lime", "avocado", "coconut", "spinach", "broccoli", "carrot",
     "tomato", "potato", "onion", "garlic", "berries", "citrus",
+    # Common infections/conditions relevant to immunonutrition (nutrition/immune
+    # support during illness, recovery diets, blood work interpretation), plus the
+    # British spelling of hemoglobin and common lab-report shorthand.
+    "covid", "malaria", "dengue", "chikungunya", "asthma", "haemoglobin", "cbc",
 ]
 
 
@@ -231,7 +246,12 @@ def train_domain_classifier():
 
     pipeline = Pipeline([
         ("tfidf", TfidfVectorizer(stop_words="english")),
-        ("clf", LogisticRegression()),
+        # class_weight="balanced" matters here: IN_DOMAIN_EXAMPLES keeps growing faster
+        # than OUT_OF_DOMAIN_EXAMPLES as new in-domain vocabulary gets added, and an
+        # unweighted LogisticRegression drifts its decision boundary toward "allow"
+        # as that imbalance grows, causing previously-correct off-domain rejections
+        # (e.g. "what's the weather", "best laptop to buy") to start passing.
+        ("clf", LogisticRegression(class_weight="balanced")),
     ])
     pipeline.fit(texts, labels)
 

@@ -63,6 +63,7 @@ def hybrid_search(query, bm25_index, vector_index, top_k=5, alpha=DEFAULT_ALPHA,
             "bm25_score": bm25_scores.get(doc_id, 0.0),
             "vector_score": vector_scores.get(doc_id, 0.0),
             "title": meta.get("title", ""),
+            "content": content,
             "content_snippet": content[:200],
         })
     return results

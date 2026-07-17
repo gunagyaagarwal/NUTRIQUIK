@@ -1,8 +1,15 @@
+import re
+
 PREDICTION_KEYWORDS = [
     "predict", "risk of", "assess my", "chance of", "diagnose", "check my",
     "am i at risk", "do i have", "test for", "screen for", "evaluate my",
-    "am i anemic", "check if i have", "what vitamin am i", "which deficiency",
+    "am i anemic", "am i diabetic", "check if i have", "what vitamin am i", "which deficiency",
 ]
+
+# "am i diabetic/hypertensive/anemic/..." and "is my blood sugar/BP/cholesterol normal"
+# style self-diagnosis questions, generalized beyond the literal phrases above.
+_AM_I_CONDITION_PATTERN = re.compile(r"\bam i \w+\b")
+_IS_MY_X_NORMAL_PATTERN = re.compile(r"\bis my [\w\s]+ (normal|high|low)\b")
 
 ADVISORY_KEYWORDS = [
     "suggest", "recommend a", "recommend me", "recommend some", "can you recommend",
@@ -11,6 +18,9 @@ ADVISORY_KEYWORDS = [
     "tips for", "how to boost", "how to reduce", "how to increase", "how to lose",
     "how to gain", "what to eat", "foods to", "help me", "how do i improve",
     "how to lower", "how to raise", "rich in", "high in", "low in", "diet plan",
+    # symptom/prevention/severity/supplement-advice phrasing — these want practical
+    # guidance (advisory top-5 + trust scoring), not a single strict factual lookup.
+    "symptoms of", "supplements help", "supplement help", "prevent", "severity",
 ]
 
 DISEASE_CONTEXT_RULES = [
@@ -24,10 +34,13 @@ DISEASE_CONTEXT_RULES = [
     (["diet recommendation"], "diet_recommendation"),
 ]
 
-# Verbs that only imply a prediction when paired with a disease/condition word
-# in the same query (e.g. "suggest my diabetes chances" or "potential of kidney
-# disease"), since alone they're too generic ("suggest a meal plan" is advisory).
-PREDICTION_COMBO_VERBS = ["predict", "suggest", "chances", "potential"]
+# Verbs that only imply a prediction when paired with a disease/condition word in the
+# same query (e.g. "predict my diabetes chances" or "potential of kidney disease").
+# "suggest" is deliberately excluded — it's overwhelmingly an advisory verb ("suggest
+# a recipe", "suggest diabetic-friendly meals"), and including it here misrouted
+# queries like "suggest diabetic, kidney friendly recipes" into a risk-assessment
+# form instead of the advisory recipe track.
+PREDICTION_COMBO_VERBS = ["predict", "chances", "potential"]
 
 DISEASE_TRIGGER_WORDS = [
     "diabetes", "diabetic", "diabities", "anemia",
@@ -46,6 +59,9 @@ def classify_intent(query):
     query_lower = query.lower()
 
     if any(keyword in query_lower for keyword in PREDICTION_KEYWORDS):
+        return "prediction"
+
+    if _AM_I_CONDITION_PATTERN.search(query_lower) or _IS_MY_X_NORMAL_PATTERN.search(query_lower):
         return "prediction"
 
     if _has_prediction_combo(query_lower):

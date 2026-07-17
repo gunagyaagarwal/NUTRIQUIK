@@ -106,6 +106,42 @@ CATEGORICAL_RANGES = {
     },
 }
 
+# Display labels (with clinical units, derived from each model's real training data
+# ranges) for plain numeric feature_cols, so users know what scale/unit to enter a
+# value in rather than guessing from a bare column name.
+FIELD_LABELS = {
+    # anemia
+    "RBC": "RBC (million/µL)", "PCV": "PCV / Hematocrit (%)", "MCV": "MCV (fL)",
+    "MCH": "MCH (pg)", "MCHC": "MCHC (g/dL)", "RDW": "RDW (%)",
+    "TLC": "TLC / WBC Count (×10³/µL)", "PLT/mm3": "Platelets (×10³/mm³)", "HGB": "Hemoglobin (g/dL)",
+    # diabetes
+    "age": "Age (years)", "HbA1c_level": "HbA1c Level (%)", "blood_glucose_level": "Blood Glucose Level (mg/dL)",
+    # kidney
+    "Bp": "Blood Pressure (mmHg)", "Sg": "Urine Specific Gravity (1.005-1.025)",
+    "Al": "Albumin (grade 0-5)", "Su": "Sugar (grade 0-5)", "Rbc": "Red Blood Cells (0=abnormal, 1=normal)",
+    "Bu": "Blood Urea (mg/dL)", "Sc": "Serum Creatinine (mg/dL)", "Sod": "Sodium (mEq/L)",
+    "Pot": "Potassium (mEq/L)", "Hemo": "Hemoglobin (g/dL)", "Wbcc": "WBC Count (cells/µL)",
+    "Rbcc": "RBC Count (million/µL)",
+    # heart
+    "Age": "Age (years)", "BP": "Resting Blood Pressure (mmHg)", "Cholesterol": "Cholesterol (mg/dL)",
+    "Max HR": "Max Heart Rate (bpm)", "ST depression": "ST Depression (mm)",
+    # vitamin_deficiency
+    "vitamin_a_percent_rda": "Vitamin A Intake (% of RDA)", "vitamin_c_percent_rda": "Vitamin C Intake (% of RDA)",
+    "vitamin_d_percent_rda": "Vitamin D Intake (% of RDA)", "vitamin_e_percent_rda": "Vitamin E Intake (% of RDA)",
+    "vitamin_b12_percent_rda": "Vitamin B12 Intake (% of RDA)", "folate_percent_rda": "Folate Intake (% of RDA)",
+    "calcium_percent_rda": "Calcium Intake (% of RDA)", "iron_percent_rda": "Iron Intake (% of RDA)",
+    "hemoglobin_g_dl": "Hemoglobin (g/dL)", "serum_vitamin_d_ng_ml": "Serum Vitamin D (ng/mL)",
+    "serum_vitamin_b12_pg_ml": "Serum Vitamin B12 (pg/mL)", "serum_folate_ng_ml": "Serum Folate (ng/mL)",
+    "symptoms_count": "Number of Symptoms (count)",
+    # supplement
+    "Weeks": "Duration (weeks)", "Initial_WT": "Initial Weight (kg)", "Final_WT": "Final Weight (kg)",
+    "Strength_Gain": "Strength Gain (fraction, e.g. 0.15 = 15%)",
+    # diet_recommendation
+    "Daily_Caloric_Intake": "Daily Caloric Intake (kcal)", "Cholesterol_mg/dL": "Cholesterol (mg/dL)",
+    "Blood_Pressure_mmHg": "Blood Pressure (mmHg)", "Glucose_mg/dL": "Glucose (mg/dL)",
+    "Weekly_Exercise_Hours": "Weekly Exercise (hours)",
+}
+
 # Per-model lab "measured" flag derivation (derived from whether the user filled
 # in that lab value, rather than asked as a separate question). No models use this
 # currently.
@@ -120,6 +156,18 @@ BMI_FEATURE_CONFIG = {
     "diet_recommendation": {"bmi_col": "BMI", "weight_col": "Weight_kg", "height_col": "Height_cm"},
 }
 
+# Feature columns that are computed/historical measurements (e.g. how closely someone
+# has adhered to a past diet plan, a nutrient-imbalance score derived from tracked
+# intake) rather than anything a first-time user filling out the form could actually
+# know. Hidden from the form entirely and fed a fixed, documented default instead of
+# asking the user to guess a number that has no real meaning to them yet.
+HIDDEN_DEFAULT_FIELDS = {
+    "diet_recommendation": {
+        "Adherence_to_Diet_Plan": 75.0,  # dataset median ~74.9 (0-100 scale)
+        "Dietary_Nutrient_Imbalance_Score": 2.5,  # dataset median ~2.4 (0-5 scale)
+    },
+}
+
 # diet_recommendation's predicted Diet_Label -> the matching curated plan doc in the IR corpus.
 DIET_LABEL_TO_DOC_ID = {
     "High_Protein": "diet_high_protein",
@@ -130,16 +178,23 @@ DIET_LABEL_TO_DOC_ID = {
     "Balanced": "diet_balanced",
 }
 
-PERSONALIZED_DIET_PHRASES = ["diet plan", "custom", "for me", "rich in", "high in", "low in"]
-NUTRIENT_GOAL_WORDS = ["protein", "fat", "fibre", "fiber", "sodium", "carb", "vitamin", "weight loss"]
-_MORE_LESS_PATTERN = re.compile(r"\b(more|less)\s+\w+")
+# Requires actual planning/recommendation intent, not just a nutrient word appearing
+# anywhere in the query — "foods rich in protein" or "recipes containing low sodium"
+# are plain advisory/factual lookups, not a request to build a personalized diet plan.
+PERSONALIZED_DIET_PHRASES = [
+    "diet plan", "meal plan", "what should i eat", "suggest meals", "suggest a meal plan",
+    "suggest my meals", "personalized diet", "custom diet", "custom meal plan",
+    "plan my diet", "plan my meals", "design my diet", "create a diet plan",
+    "create my diet", "recommend a diet plan", "recommend my diet", "build me a diet",
+]
+# "more protein"/"less sodium" only counts as a diet-planning signal when it's also
+# talking about diet/meals/food, not just any comparison question.
+_MORE_LESS_PATTERN = re.compile(r"\b(more|less)\s+\w+\b.*\b(diet|meal|food|foods)\b")
 
 
 def is_personalized_diet_request(query):
     query_lower = query.lower()
     if any(phrase in query_lower for phrase in PERSONALIZED_DIET_PHRASES):
-        return True
-    if any(word in query_lower for word in NUTRIENT_GOAL_WORDS):
         return True
     return bool(_MORE_LESS_PATTERN.search(query_lower))
 
@@ -743,7 +798,8 @@ def render_prediction_form(model_name):
     grouped_cols = {c for cols in onehot_groups.values() for c in cols}
     bmi_config = BMI_FEATURE_CONFIG.get(model_name)
     bmi_related_cols = set(bmi_config.values()) if bmi_config else set()
-    skip_cols = grouped_cols | derived_cols | bmi_related_cols
+    hidden_default_fields = HIDDEN_DEFAULT_FIELDS.get(model_name, {})
+    skip_cols = grouped_cols | derived_cols | bmi_related_cols | set(hidden_default_fields)
 
     profile = st.session_state.user_profile
     prefilled_fields = []
@@ -772,6 +828,12 @@ def render_prediction_form(model_name):
 
     with st.form(key=f"form_{model_name}"):
         st.subheader(f"🧾 {model_name.replace('_', ' ').title()} Assessment Form")
+        if hidden_default_fields:
+            st.caption(
+                f"ℹ️ {', '.join(c.replace('_', ' ') for c in hidden_default_fields)} "
+                "use a typical baseline value since there's no way for a first-time user to know these — "
+                "not asked below."
+            )
         widget_cols = st.columns(3)
         idx = 0
 
@@ -819,7 +881,8 @@ def render_prediction_form(model_name):
                 if saved is not None:
                     prefilled_fields.append(col)
                 field_values[col] = target.number_input(
-                    col, value=float(saved) if saved is not None else None, key=f"{model_name}_{col}",
+                    FIELD_LABELS.get(col, col), value=float(saved) if saved is not None else None,
+                    key=f"{model_name}_{col}",
                 )
 
         if prefilled_fields:
@@ -832,7 +895,7 @@ def render_prediction_form(model_name):
     inputs = {}
     missing_fields = []
     for col in feature_cols:
-        if col in grouped_cols or col in derived_cols or col in bmi_related_cols:
+        if col in grouped_cols or col in derived_cols or col in bmi_related_cols or col in hidden_default_fields:
             continue
         val = field_values.get(col)
         if val is None:
@@ -862,6 +925,9 @@ def render_prediction_form(model_name):
         st.session_state.user_profile["Height_cm"] = height_cm
         st.session_state.user_profile["Weight_kg"] = weight_kg
 
+    for col, default_value in hidden_default_fields.items():
+        inputs[col] = default_value
+
     if missing_fields:
         st.warning(
             f"⚠️ Left blank: {', '.join(missing_fields)} — treated as 0, prediction confidence may be reduced."
@@ -870,16 +936,23 @@ def render_prediction_form(model_name):
     return model_name, inputs
 
 
+# Not disease-risk assessments — they're recommendation models with their own
+# dedicated entry points (personalized diet request flow / advisory track), so they
+# don't belong in a "select a condition to assess" disease picker.
+GENERIC_FORM_EXCLUDED_MODELS = {"supplement", "diet_recommendation"}
+
+
 def render_generic_form():
     registry = get_registry_safe()
-    if not registry:
+    condition_options = sorted(set(registry.keys()) - GENERIC_FORM_EXCLUDED_MODELS)
+    if not condition_options:
         st.warning("No trained models available yet.")
         return None
 
     st.subheader("🧾 General Health Assessment")
     st.caption("Select a condition below to open its dedicated assessment form.")
     selected_model = st.selectbox(
-        "Select a condition to assess:", sorted(registry.keys()),
+        "Select a condition to assess:", condition_options,
         index=None, placeholder="Choose a condition...", key="generic_model_select",
     )
     if selected_model is None:
@@ -1117,6 +1190,23 @@ def run_full_pipeline(query):
         ]
         non_recipe.sort(key=lambda r: r["vector_score"], reverse=True)
         factual_results = non_recipe[:1]
+
+        # A "vitamin/mineral deficiency" query is really asking about the deficiency
+        # DISEASE it causes (e.g. vitamin D deficiency -> Rickets), not just the
+        # nutrient's general info page. Surface the linked disease doc too if it's
+        # a genuine match, not just whichever the vector score happened to prefer.
+        if factual_results and "deficien" in query.lower():
+            top_category = index.doc_metadata.get(factual_results[0]["doc_id"], {}).get("category")
+            if top_category == "Vitamins & Minerals":
+                linked_disease = next(
+                    (r for r in non_recipe[1:]
+                     if index.doc_metadata.get(r["doc_id"], {}).get("category") == "Deficiency Diseases"
+                     and r["vector_score"] >= FACTUAL_RELEVANCE_THRESHOLD),
+                    None,
+                )
+                if linked_disease:
+                    factual_results.append(linked_disease)
+
         return {"status": "SUCCESS", "intent": "factual", "results": factual_results, "rejected_results": []}
 
     scored = rank_by_trust(score_documents(query, search_results, index))
@@ -1211,13 +1301,28 @@ def render_qa_pipeline_view():
             if keywords:
                 st.write(f"**Keywords:** {keywords}")
         with col_text:
-            raw_text = top["content_snippet"]
+            original_text = top["content"]
+            raw_text = original_text
+            ai_refined = False
             try:
                 with st.spinner("Refining with AI..."):
-                    raw_text = refine_answer(raw_text, user_query)
+                    refined = refine_answer(original_text, user_query)
+                if refined and refined.strip() and refined != original_text:
+                    raw_text = refined
+                    ai_refined = True
             except Exception:
                 pass
+            if not ai_refined:
+                raw_text = (
+                    f"{raw_text}\n\n💡 In summary: this is general nutrition/health information — "
+                    "consult a registered dietitian or healthcare provider for personalized advice."
+                )
             render_result_card(top["title"], raw_text, meta=f"Doc: {top['doc_id']}")
+
+        if len(results) > 1:
+            linked = results[1]
+            st.markdown("### 🔗 Related Deficiency Disease")
+            render_result_card(linked["title"], linked["content"], meta=f"Doc: {linked['doc_id']}")
         return
 
     # ADVISORY
@@ -1231,7 +1336,7 @@ def render_qa_pipeline_view():
     col_top1, col_top2 = st.columns([3, 1])
     with col_top1:
         render_result_card(
-            top["title"], top["content"][:500], trust_score=top["trust_score"],
+            top["title"], top["content"], trust_score=top["trust_score"],
             meta=(f"BM25: {top['features']['bm25_score']:.2f} | "
                   f"Semantic: {top['features']['vector_score']:.2f}"),
         )
@@ -1255,7 +1360,7 @@ def render_qa_pipeline_view():
         st.caption(f"Only documents meeting the >= {ADVISORY_TRUST_THRESHOLD:.2f} trust threshold are displayed below.")
         st.plotly_chart(create_trust_comparison_chart(results, rejected_results), use_container_width=True)
         for idx, doc in enumerate(results[1:], start=2):
-            render_result_card(f"Rank #{idx}: {doc['title']}", doc["content"][:300], trust_score=doc["trust_score"])
+            render_result_card(f"Rank #{idx}: {doc['title']}", doc["content"], trust_score=doc["trust_score"])
 
         if rejected_results:
             with st.expander(f"🚫 Filtered out ({len(rejected_results)} results below {ADVISORY_TRUST_THRESHOLD*100:.0f}% trust)"):

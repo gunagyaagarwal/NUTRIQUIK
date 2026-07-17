@@ -32,10 +32,29 @@ def refine_answer(raw_text, query):
         return raw_text
 
 
+def _fallback_summary(results):
+    """Non-AI summary built directly from retrieved content, used whenever Gemini
+    isn't configured/available — so the summarize button always produces something
+    useful instead of a dead-end "Summary unavailable" message."""
+    parts = []
+    for r in results[:3]:
+        title = r.get("title", "").strip()
+        first_sentence = r.get("content", "").strip().split(". ")[0].strip()
+        if first_sentence and not first_sentence.endswith("."):
+            first_sentence += "."
+        parts.append(f"**{title}** — {first_sentence}" if title and first_sentence else title)
+    if not parts:
+        return "No results available to summarize."
+    return (
+        "\n\n".join(p for p in parts if p)
+        + "\n\n*(Quick summary from the retrieved results — set a GEMINI_API_KEY for an AI-written summary instead.)*"
+    )
+
+
 def summarize_results(results, query):
     model = _get_gemini_model()
     if model is None:
-        return "Summary unavailable"
+        return _fallback_summary(results)
 
     top_texts = [r.get("content", "") for r in results[:3]]
     prompt = (
@@ -45,9 +64,10 @@ def summarize_results(results, query):
     )
     try:
         response = model.generate_content(prompt)
-        return response.text.strip()
+        text = response.text.strip()
+        return text if text else _fallback_summary(results)
     except Exception:
-        return "Summary unavailable"
+        return _fallback_summary(results)
 
 
 if __name__ == "__main__":
