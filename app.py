@@ -1099,7 +1099,7 @@ def run_full_pipeline(query):
 
 def render_qa_pipeline_view(ai_refine_enabled):
     render_section_header(
-        "🔍", "Intelligent Question-Answering Pipeline",
+        "🧠", "Intelligent Question-Answering Pipeline",
         "Ask questions on immunonutrition, vitamin efficacy, or dietary supplements. "
         "Real BM25 + MiniLM hybrid retrieval with heuristic trust scoring and XGBoost disease prediction.",
         theme="teal",
@@ -1404,7 +1404,7 @@ render_sidebar_brand()
 nav_choice = st.sidebar.radio(
     "Select Interface View:",
     [
-        "🔍 QA Pipeline & Query Interface",
+        "🧠 QA Pipeline & Query Interface",
         "📊 Evaluation & Trust Analytics",
         "📚 Corpus & Dataset Inventory",
         "🏗️ System Blueprint & WBS Timeline",
@@ -1414,7 +1414,7 @@ nav_choice = st.sidebar.radio(
 # Retrieval indexes are only needed by views that actually search the corpus —
 # skip the warm-up cost entirely for the static Blueprint page.
 RETRIEVAL_VIEWS = {
-    "🔍 QA Pipeline & Query Interface",
+    "🧠 QA Pipeline & Query Interface",
     "📊 Evaluation & Trust Analytics",
     "📚 Corpus & Dataset Inventory",
 }
@@ -1454,7 +1454,7 @@ if sidebar_importance:
 else:
     st.sidebar.caption("Run a prediction to see feature importances.")
 
-if nav_choice == "🔍 QA Pipeline & Query Interface":
+if nav_choice == "🧠 QA Pipeline & Query Interface":
     render_qa_pipeline_view(ai_refine_enabled)
 elif nav_choice == "📊 Evaluation & Trust Analytics":
     render_evaluation_view()
