@@ -602,6 +602,28 @@ def get_prediction_risk_probability(model_name, prediction):
     return prediction["confidence"]
 
 
+# Above this risk/confidence level, the closing statement urges a doctor visit
+# instead of the standard "be careful" advisory.
+HIGH_RISK_THRESHOLD = 0.95
+
+
+def render_prediction_verdict(model_name, prediction, risk_pct):
+    display_name = model_name.replace("_", " ").title()
+    label = prediction["prediction_label"]
+    st.markdown(
+        f"📝 **Summary:** For the **{display_name}** assessment, the model predicts **{label}** "
+        f"with a risk/confidence score of **{risk_pct * 100:.1f}%** "
+        f"(model confidence: {prediction['confidence'] * 100:.1f}%)."
+    )
+    if risk_pct >= HIGH_RISK_THRESHOLD:
+        st.error("🚨 **High risk detected — please take advice from a doctor for further evaluation.**")
+    else:
+        st.info(
+            "💡 **Be careful and take care of your health** — maintain a balanced diet, "
+            "regular exercise, and routine checkups."
+        )
+
+
 def reveal_more_results():
     st.session_state.show_more_clicked = True
 
@@ -931,7 +953,8 @@ def run_prediction_flow(disease):
         else:
             st.caption("SHAP explanation unavailable for this model/input.")
 
-    st.caption("📈 Chart placeholders (probability distribution, feature trends) — added in a later pass.")
+    st.markdown("---")
+    render_prediction_verdict(model_name, prediction, risk_pct)
 
 
 def render_diet_recommendation_flow():
@@ -996,6 +1019,10 @@ def render_diet_recommendation_flow():
     st.markdown("---")
     st.markdown("### 📖 Matching Diet Plan")
     render_result_card(doc_meta["title"], doc_meta["content"], meta=f"Doc: {doc_id}")
+
+    st.markdown("---")
+    risk_pct = get_prediction_risk_probability(model_name, prediction)
+    render_prediction_verdict(model_name, prediction, risk_pct)
 
 
 def render_metric_box(value, label):
@@ -1097,7 +1124,7 @@ def run_full_pipeline(query):
     return {"status": "SUCCESS", "intent": "advisory", "results": passed, "rejected_results": rejected}
 
 
-def render_qa_pipeline_view(ai_refine_enabled):
+def render_qa_pipeline_view():
     render_section_header(
         "🧠", "Intelligent Question-Answering Pipeline",
         "Ask questions on immunonutrition, vitamin efficacy, or dietary supplements. "
@@ -1185,12 +1212,11 @@ def render_qa_pipeline_view(ai_refine_enabled):
                 st.write(f"**Keywords:** {keywords}")
         with col_text:
             raw_text = top["content_snippet"]
-            if ai_refine_enabled:
-                try:
-                    with st.spinner("Refining with AI..."):
-                        raw_text = refine_answer(raw_text, user_query)
-                except Exception:
-                    pass
+            try:
+                with st.spinner("Refining with AI..."):
+                    raw_text = refine_answer(raw_text, user_query)
+            except Exception:
+                pass
             render_result_card(top["title"], raw_text, meta=f"Doc: {top['doc_id']}")
         return
 
@@ -1439,7 +1465,6 @@ with st.sidebar.expander("🗂️ Your Session Profile"):
         st.session_state.user_profile = {}
 
 st.sidebar.markdown("---")
-ai_refine_enabled = st.sidebar.checkbox("Enable AI Refinement", value=False)
 st.sidebar.caption("🔎 Hybrid retrieval: BM25 (keyword) + MiniLM (semantic)")
 
 st.sidebar.markdown("---")
@@ -1455,7 +1480,7 @@ else:
     st.sidebar.caption("Run a prediction to see feature importances.")
 
 if nav_choice == "🧠 QA Pipeline & Query Interface":
-    render_qa_pipeline_view(ai_refine_enabled)
+    render_qa_pipeline_view()
 elif nav_choice == "📊 Evaluation & Trust Analytics":
     render_evaluation_view()
 elif nav_choice == "📚 Corpus & Dataset Inventory":
