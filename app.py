@@ -270,16 +270,51 @@ def inject_custom_css():
             font-size: 0.92rem;
             font-weight: 600;
         }
-        .nq-section-title {
-            color: #FFFFFF;
-            font-size: 2.05rem;
-            font-weight: 800;
-            margin: 0.7rem 0 0.55rem;
+        .nq-section-header {
+            display: flex;
+            align-items: center;
+            gap: 1.1rem;
+            padding: 1.3rem 1.6rem;
+            border-radius: 14px;
+            margin: 0.4rem 0 1.5rem;
+            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.22);
         }
-        .nq-muted {
-            color: #9CA3AF;
-            font-size: 0.94rem;
-            margin-bottom: 1.35rem;
+        .nq-section-badge {
+            flex-shrink: 0;
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.16);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+        }
+        .nq-section-heading {
+            color: #FFFFFF;
+            font-size: 1.55rem;
+            font-weight: 800;
+            line-height: 1.25;
+            margin: 0 0 0.3rem;
+        }
+        .nq-section-subtitle {
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 0.92rem;
+            font-weight: 500;
+            line-height: 1.45;
+            margin: 0;
+        }
+        .nq-section-teal {
+            background: linear-gradient(120deg, #0F766E 0%, #0891B2 100%);
+        }
+        .nq-section-purple {
+            background: linear-gradient(120deg, #6D28D9 0%, #4C1D95 100%);
+        }
+        .nq-section-amber {
+            background: linear-gradient(120deg, #B45309 0%, #92400E 100%);
+        }
+        .nq-section-blue {
+            background: linear-gradient(120deg, #1D4ED8 0%, #1E3A8A 100%);
         }
         h1, h2, h3, h4,
         [data-testid="stMarkdownContainer"] h1,
@@ -517,6 +552,19 @@ def _trust_class(score):
     if score >= ADVISORY_TRUST_THRESHOLD:
         return "nq-trust-medium"
     return "nq-trust-low"
+
+
+def render_section_header(icon, title, subtitle, theme="teal"):
+    st.markdown(
+        f'<div class="nq-section-header nq-section-{theme}">'
+        f'<div class="nq-section-badge">{icon}</div>'
+        '<div>'
+        f'<div class="nq-section-heading">{html.escape(title)}</div>'
+        f'<div class="nq-section-subtitle">{html.escape(subtitle)}</div>'
+        '</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
 
 def render_result_card(title, body, trust_score=None, meta=None):
@@ -1050,10 +1098,11 @@ def run_full_pipeline(query):
 
 
 def render_qa_pipeline_view(ai_refine_enabled):
-    st.header("🔍 Intelligent Question-Answering Pipeline")
-    st.caption(
+    render_section_header(
+        "🔍", "Intelligent Question-Answering Pipeline",
         "Ask questions on immunonutrition, vitamin efficacy, or dietary supplements. "
-        "Real BM25 + MiniLM hybrid retrieval with heuristic trust scoring and XGBoost disease prediction."
+        "Real BM25 + MiniLM hybrid retrieval with heuristic trust scoring and XGBoost disease prediction.",
+        theme="teal",
     )
 
     st.markdown("**Quick Test Prompts:**")
@@ -1189,10 +1238,11 @@ def render_qa_pipeline_view(ai_refine_enabled):
 
 
 def render_evaluation_view():
-    st.header("📊 Information Retrieval & Trust Analytics Dashboard")
-    st.caption(
+    render_section_header(
+        "📊", "Information Retrieval & Trust Analytics Dashboard",
         "Real evaluation on the 20-query ground-truth set: BM25-only vs BM25+MiniLM hybrid retrieval, "
-        "plus XGBoost disease-model metrics."
+        "plus XGBoost disease-model metrics.",
+        theme="purple",
     )
 
     eval_results = load_eval_results()
@@ -1241,8 +1291,11 @@ def render_evaluation_view():
 
 
 def render_corpus_view():
-    st.header("📚 Curated Corpus & Dataset Inventory")
-    st.caption("Real IR corpus (BM25 + MiniLM index) and the datasets used to train the 9 XGBoost disease/nutrition models.")
+    render_section_header(
+        "📚", "Curated Corpus & Dataset Inventory",
+        "Real IR corpus (BM25 + MiniLM index) and the datasets used to train the 7 XGBoost disease/nutrition models.",
+        theme="amber",
+    )
 
     _, documents = get_bm25_index()
     df_corpus = pd.DataFrame(documents)
@@ -1270,8 +1323,11 @@ def render_corpus_view():
 
 
 def render_blueprint_view():
-    st.header("🏗️ System Architecture Blueprint & Work Breakdown Structure")
-    st.caption("Mapped to the actual implemented pipeline.")
+    render_section_header(
+        "🏗️", "System Architecture Blueprint & Work Breakdown Structure",
+        "Mapped to the actual implemented pipeline.",
+        theme="blue",
+    )
 
     st.subheader("🔄 System Architecture Flowchart")
     st.markdown(
