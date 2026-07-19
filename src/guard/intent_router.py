@@ -27,6 +27,9 @@ ADVISORY_KEYWORDS = [
     # so a recipe request classified as factual would get zero recipes back, always.
     # "recipi" (not just "recipe") also catches the common misspelling "recipies".
     "recipe", "recipi",
+    # Naming a specific dish/drink type implies wanting the recipe for it, even
+    # without the literal word "recipe" — same reasoning as above.
+    "milkshake", "smoothie",
 ]
 
 DISEASE_CONTEXT_RULES = [

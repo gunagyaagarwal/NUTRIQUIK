@@ -187,6 +187,9 @@ IN_DOMAIN_EXAMPLES = [
     "is cucumber healthy", "cauliflower nutrition", "cabbage health benefits",
     "bell pepper nutrition", "capsicum health benefits", "sweet potato nutrition",
     "beetroot health benefits", "benefits of beets",
+    # Milkshakes/smoothies
+    "milkshake recipes", "protein milkshake", "healthy milkshake", "chocolate milkshake recipe",
+    "banana milkshake benefits", "smoothie recipes", "healthy smoothie for breakfast",
 ]
 
 OUT_OF_DOMAIN_EXAMPLES = [
@@ -265,6 +268,7 @@ DOMAIN_KEYWORDS = [
     "hiv", "aids", "cancer", "tumor", "tumour", "oncology", "leukemia", "leukaemia", "lymphoma",
     # More vegetables not already covered above.
     "cucumber", "cauliflower", "cabbage", "bell pepper", "capsicum", "sweet potato", "beetroot", "beet",
+    "milkshake", "smoothie",
 ]
 
 
