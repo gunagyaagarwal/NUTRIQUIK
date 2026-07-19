@@ -228,6 +228,8 @@ DOMAIN_KEYWORDS = [
     # support during illness, recovery diets, blood work interpretation), plus the
     # British spelling of hemoglobin and common lab-report shorthand.
     "covid", "malaria", "dengue", "chikungunya", "asthma", "haemoglobin", "cbc",
+    # Common misspellings of chikungunya seen in real queries.
+    "chickengunia", "chickungunya", "chickungunia",
 ]
 
 

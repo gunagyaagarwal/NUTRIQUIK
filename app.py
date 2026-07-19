@@ -1201,6 +1201,7 @@ def run_full_pipeline(query):
                 linked_disease = next(
                     (r for r in non_recipe[1:]
                      if index.doc_metadata.get(r["doc_id"], {}).get("category") == "Deficiency Diseases"
+                     and r["doc_id"] != "dis_vitamin_deficiency_overview"
                      and r["vector_score"] >= FACTUAL_RELEVANCE_THRESHOLD),
                     None,
                 )

@@ -21,6 +21,11 @@ ADVISORY_KEYWORDS = [
     # symptom/prevention/severity/supplement-advice phrasing — these want practical
     # guidance (advisory top-5 + trust scoring), not a single strict factual lookup.
     "symptoms of", "supplements help", "supplement help", "prevent", "severity",
+    # A request mentioning "recipe(s)" always wants food preparation guidance, never
+    # a definitional lookup — critical since the factual track explicitly excludes
+    # Recipes-category documents (a recipe is never the right answer to "what is X"),
+    # so a recipe request classified as factual would get zero recipes back, always.
+    "recipe",
 ]
 
 DISEASE_CONTEXT_RULES = [
