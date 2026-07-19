@@ -199,6 +199,26 @@ def is_personalized_diet_request(query):
     return bool(_MORE_LESS_PATTERN.search(query_lower))
 
 
+# BM25/category-relevance/term-overlap all rely on exact token matches, so a
+# misspelling like "recipies" scores near-zero on several trust features at once
+# even against a genuinely relevant document — normalizing common misspellings
+# before retrieval fixes the root cause instead of patching each symptom.
+_QUERY_SPELLING_FIXES = [
+    (re.compile(r"\brecipies\b", re.IGNORECASE), "recipes"),
+    (re.compile(r"\brecipie\b", re.IGNORECASE), "recipe"),
+    (re.compile(r"\brecepies\b", re.IGNORECASE), "recipes"),
+    (re.compile(r"\brecepie\b", re.IGNORECASE), "recipe"),
+    (re.compile(r"\brecipy\b", re.IGNORECASE), "recipe"),
+]
+
+
+def normalize_query_spelling(query):
+    normalized = query
+    for pattern, replacement in _QUERY_SPELLING_FIXES:
+        normalized = pattern.sub(replacement, normalized)
+    return normalized
+
+
 def inject_custom_css():
     st.markdown(
         """
@@ -1165,16 +1185,31 @@ def run_full_pipeline(query):
     if intent == "advisory" and is_personalized_diet_request(query):
         return {"status": "SUCCESS", "intent": "diet_form"}
 
+    # A query that explicitly asks for a recipe wants recipes, not a tangential
+    # definition/fact card that happens to score well on shared vocabulary (e.g.
+    # "vitamin c recipes" pulling in the "Vitamin C" fact sheet itself) — "recipi"
+    # also catches the common misspelling "recipies". Cast a wider net (top_k=15
+    # instead of 5) so purpose-built recipes aren't crowded out of the candidate
+    # pool by the much larger pool of generic, uncurated recipes.
+    is_recipe_request = intent == "advisory" and any(k in query.lower() for k in ("recipe", "recipi"))
+    retrieval_query = normalize_query_spelling(query)
+
     try:
         index, _ = get_bm25_index()
         vector_index = get_vector_index()
-        top_k = 8 if intent == "factual" else 5
-        search_results = hybrid_search(query, index, vector_index, top_k=top_k)
+        top_k = 8 if intent == "factual" else (15 if is_recipe_request else 5)
+        search_results = hybrid_search(retrieval_query, index, vector_index, top_k=top_k)
     except Exception as e:
         return {
             "status": "SUCCESS", "intent": intent, "results": [], "rejected_results": [],
             "error": f"{type(e).__name__}: {e}",
         }
+
+    if is_recipe_request:
+        search_results = [
+            r for r in search_results
+            if index.doc_metadata.get(r["doc_id"], {}).get("category") == "Recipes"
+        ]
 
     if intent == "factual":
         # A recipe is never a valid answer to a definitional "what is X" query —
@@ -1210,7 +1245,7 @@ def run_full_pipeline(query):
 
         return {"status": "SUCCESS", "intent": "factual", "results": factual_results, "rejected_results": []}
 
-    scored = rank_by_trust(score_documents(query, search_results, index))
+    scored = rank_by_trust(score_documents(retrieval_query, search_results, index))
     passed, rejected = apply_guardrail(scored, threshold=ADVISORY_TRUST_THRESHOLD)
     return {"status": "SUCCESS", "intent": "advisory", "results": passed, "rejected_results": rejected}
 

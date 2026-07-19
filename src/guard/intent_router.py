@@ -25,7 +25,8 @@ ADVISORY_KEYWORDS = [
     # a definitional lookup — critical since the factual track explicitly excludes
     # Recipes-category documents (a recipe is never the right answer to "what is X"),
     # so a recipe request classified as factual would get zero recipes back, always.
-    "recipe",
+    # "recipi" (not just "recipe") also catches the common misspelling "recipies".
+    "recipe", "recipi",
 ]
 
 DISEASE_CONTEXT_RULES = [
