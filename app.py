@@ -233,6 +233,26 @@ def extract_symptom_focused_answer(query, content):
     return match.group(0).strip() if match else None
 
 
+def find_named_vitamin_mineral_doc(query, index):
+    """Direct name match for a Vitamins & Minerals doc mentioned in the query.
+    Needed because semantic ranking alone is unreliable here: for an ambiguous
+    query like "vitamin a deficiency" or "vitamin b deficiency", the generic
+    Vitamin Deficiency Overview (or even an unrelated doc like Anemia) can score
+    higher on vector similarity than the specific vitamin's own page, purely
+    from sharing more "deficiency"-flavored vocabulary — not because it's a
+    better answer to "the user asked about vitamin A specifically"."""
+    query_lower = query.lower()
+    candidates = [
+        (doc_id, meta.get("title", "")) for doc_id, meta in index.doc_metadata.items()
+        if meta.get("category") == "Vitamins & Minerals"
+    ]
+    candidates.sort(key=lambda x: len(x[1]), reverse=True)
+    for doc_id, title in candidates:
+        if title and re.search(rf"\b{re.escape(title.lower())}\b", query_lower):
+            return doc_id
+    return None
+
+
 def inject_custom_css():
     st.markdown(
         """
@@ -1211,7 +1231,7 @@ def run_full_pipeline(query):
     try:
         index, _ = get_bm25_index()
         vector_index = get_vector_index()
-        top_k = 8 if intent == "factual" else (15 if is_recipe_request else 5)
+        top_k = 20 if intent == "factual" else (15 if is_recipe_request else 5)
         search_results = hybrid_search(retrieval_query, index, vector_index, top_k=top_k)
     except Exception as e:
         return {
@@ -1239,6 +1259,17 @@ def run_full_pipeline(query):
         ]
         non_recipe.sort(key=lambda r: r["vector_score"], reverse=True)
         factual_results = non_recipe[:1]
+
+        # If the query directly names a specific vitamin/mineral, that document
+        # wins outright over whatever the generic vector-score ranking preferred —
+        # semantic similarity alone is unreliable for disambiguating "vitamin a
+        # deficiency" from the broader Vitamin Deficiency Overview or unrelated
+        # docs that just happen to share more vocabulary.
+        named_doc_id = find_named_vitamin_mineral_doc(query, index)
+        if named_doc_id:
+            named_match = next((r for r in non_recipe if r["doc_id"] == named_doc_id), None)
+            if named_match:
+                factual_results = [named_match]
 
         # A "vitamin/mineral deficiency" query is really asking about the deficiency
         # DISEASE it causes (e.g. vitamin D deficiency -> Rickets), not just the
