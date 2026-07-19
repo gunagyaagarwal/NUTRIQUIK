@@ -177,6 +177,16 @@ IN_DOMAIN_EXAMPLES = [
     "aids prevention", "diet for aids patients", "what is cancer", "causes of cancer",
     "cancer prevention", "foods that help prevent cancer", "diet during cancer treatment",
     "nutrition for cancer patients", "antioxidant foods for cancer prevention",
+    # Cancer types
+    "what is breast cancer", "what is lung cancer", "what is skin cancer", "what is leukemia",
+    "what is colorectal cancer", "what is prostate cancer", "what is cervical cancer",
+    "what is liver cancer", "what is stomach cancer", "what is oral cancer",
+    "what is lymphoma", "what is pancreatic cancer",
+    # Fruits and vegetables
+    "is apple healthy", "banana nutrition facts", "orange health benefits",
+    "is cucumber healthy", "cauliflower nutrition", "cabbage health benefits",
+    "bell pepper nutrition", "capsicum health benefits", "sweet potato nutrition",
+    "beetroot health benefits", "benefits of beets",
 ]
 
 OUT_OF_DOMAIN_EXAMPLES = [
@@ -252,7 +262,9 @@ DOMAIN_KEYWORDS = [
     "tuberculosis", "coronavirus", "chickenpox", "chicken pox", "jaundice",
     "food poisoning", "hepatitis", "cholera", "diarrhea", "diarrhoea",
     "depression", "typhoid", "influenza", "flu",
-    "hiv", "aids", "cancer", "tumor", "tumour", "oncology",
+    "hiv", "aids", "cancer", "tumor", "tumour", "oncology", "leukemia", "leukaemia", "lymphoma",
+    # More vegetables not already covered above.
+    "cucumber", "cauliflower", "cabbage", "bell pepper", "capsicum", "sweet potato", "beetroot", "beet",
 ]
 
 
