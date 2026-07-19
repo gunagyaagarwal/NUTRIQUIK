@@ -171,6 +171,12 @@ IN_DOMAIN_EXAMPLES = [
     "what is typhoid", "typhoid diet", "foods to eat during typhoid fever",
     "what is the flu", "flu diet", "foods to eat when you have the flu",
     "immunity boosting foods for flu recovery",
+    # HIV/AIDS and cancer (sources, prevention, and supportive nutrition)
+    "what is hiv", "how is hiv transmitted", "hiv prevention", "diet for hiv patients",
+    "nutrition for people living with hiv", "what is aids", "difference between hiv and aids",
+    "aids prevention", "diet for aids patients", "what is cancer", "causes of cancer",
+    "cancer prevention", "foods that help prevent cancer", "diet during cancer treatment",
+    "nutrition for cancer patients", "antioxidant foods for cancer prevention",
 ]
 
 OUT_OF_DOMAIN_EXAMPLES = [
@@ -246,6 +252,7 @@ DOMAIN_KEYWORDS = [
     "tuberculosis", "coronavirus", "chickenpox", "chicken pox", "jaundice",
     "food poisoning", "hepatitis", "cholera", "diarrhea", "diarrhoea",
     "depression", "typhoid", "influenza", "flu",
+    "hiv", "aids", "cancer", "tumor", "tumour", "oncology",
 ]
 
 
