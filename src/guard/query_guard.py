@@ -159,6 +159,18 @@ IN_DOMAIN_EXAMPLES = [
     "what is haemoglobin", "haemoglobin levels", "low haemoglobin symptoms",
     "how to increase haemoglobin", "what is a cbc report", "cbc report", "cbc test results",
     "understanding my cbc blood test",
+    # More common illnesses (nutrition/immune support during illness and recovery)
+    "what is tuberculosis", "tb symptoms", "diet for tb patients", "what is coronavirus",
+    "diet during coronavirus recovery", "what is chicken pox", "chickenpox diet",
+    "foods to eat during chickenpox", "what is jaundice", "diet for jaundice patients",
+    "foods to avoid with jaundice", "what is food poisoning", "food poisoning diet",
+    "what to eat after food poisoning", "what is hepatitis", "diet for hepatitis patients",
+    "liver friendly foods for hepatitis", "what is cholera", "cholera treatment diet",
+    "what is diarrhea", "diarrhea diet", "foods to eat during diarrhea",
+    "what is depression", "foods that help with depression", "nutrition for mental health",
+    "what is typhoid", "typhoid diet", "foods to eat during typhoid fever",
+    "what is the flu", "flu diet", "foods to eat when you have the flu",
+    "immunity boosting foods for flu recovery",
 ]
 
 OUT_OF_DOMAIN_EXAMPLES = [
@@ -230,6 +242,10 @@ DOMAIN_KEYWORDS = [
     "covid", "malaria", "dengue", "chikungunya", "asthma", "haemoglobin", "cbc",
     # Common misspellings of chikungunya seen in real queries.
     "chickengunia", "chickungunya", "chickungunia",
+    # More common illnesses.
+    "tuberculosis", "coronavirus", "chickenpox", "chicken pox", "jaundice",
+    "food poisoning", "hepatitis", "cholera", "diarrhea", "diarrhoea",
+    "depression", "typhoid", "influenza", "flu",
 ]
 
 

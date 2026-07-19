@@ -209,6 +209,9 @@ _QUERY_SPELLING_FIXES = [
     (re.compile(r"\brecepies\b", re.IGNORECASE), "recipes"),
     (re.compile(r"\brecepie\b", re.IGNORECASE), "recipe"),
     (re.compile(r"\brecipy\b", re.IGNORECASE), "recipe"),
+    (re.compile(r"\bchickengunia\b", re.IGNORECASE), "chikungunya"),
+    (re.compile(r"\bchickungunya\b", re.IGNORECASE), "chikungunya"),
+    (re.compile(r"\bchickungunia\b", re.IGNORECASE), "chikungunya"),
 ]
 
 
