@@ -190,6 +190,11 @@ IN_DOMAIN_EXAMPLES = [
     # Milkshakes/smoothies
     "milkshake recipes", "protein milkshake", "healthy milkshake", "chocolate milkshake recipe",
     "banana milkshake benefits", "smoothie recipes", "healthy smoothie for breakfast",
+    # Eggs
+    "are eggs healthy", "egg nutrition facts", "egg recipes", "boiled egg benefits",
+    "how many eggs a day is healthy", "egg protein content", "scrambled eggs recipe",
+    "how to make an omelette", "omelette recipe", "boiled eggs recipe", "egg curry recipe",
+    "egg bhurji recipe", "egg salad recipe", "egg sandwich recipe", "poached eggs recipe",
 ]
 
 OUT_OF_DOMAIN_EXAMPLES = [
@@ -268,7 +273,7 @@ DOMAIN_KEYWORDS = [
     "hiv", "aids", "cancer", "tumor", "tumour", "oncology", "leukemia", "leukaemia", "lymphoma",
     # More vegetables not already covered above.
     "cucumber", "cauliflower", "cabbage", "bell pepper", "capsicum", "sweet potato", "beetroot", "beet",
-    "milkshake", "smoothie",
+    "milkshake", "smoothie", "egg", "omelette", "omelet",
 ]
 
 

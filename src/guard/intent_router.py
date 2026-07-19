@@ -30,6 +30,11 @@ ADVISORY_KEYWORDS = [
     # Naming a specific dish/drink type implies wanting the recipe for it, even
     # without the literal word "recipe" — same reasoning as above.
     "milkshake", "smoothie",
+    # "how to make/cook X" is one of the most common ways people ask for a recipe
+    # without ever saying the word "recipe" — same failure mode as above (e.g.
+    # "how to make an omelette" was returning zero results, since every top match
+    # was Recipes-category and the factual track excludes that category entirely).
+    "how to make", "how to cook", "how do i make", "how do i cook",
 ]
 
 DISEASE_CONTEXT_RULES = [

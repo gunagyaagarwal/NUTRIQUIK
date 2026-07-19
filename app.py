@@ -1229,7 +1229,8 @@ def run_full_pipeline(query):
     # instead of 5) so purpose-built recipes aren't crowded out of the candidate
     # pool by the much larger pool of generic, uncurated recipes.
     is_recipe_request = intent == "advisory" and any(
-        k in query.lower() for k in ("recipe", "recipi", "milkshake", "smoothie")
+        k in query.lower() for k in
+        ("recipe", "recipi", "milkshake", "smoothie", "how to make", "how to cook")
     )
     retrieval_query = normalize_query_spelling(query)
 
