@@ -219,6 +219,20 @@ def normalize_query_spelling(query):
     return normalized
 
 
+# Every Vitamins & Minerals / Deficiency Diseases doc is written with this
+# consistent "Deficiency symptoms: ..." sentence — when the user specifically
+# asks about symptoms, extract just that sentence instead of showing the whole
+# document (benefits, food sources, RDA, etc. they didn't ask for).
+_SYMPTOM_SENTENCE_PATTERN = re.compile(r"Deficiency symptoms:[^.]*\.", re.IGNORECASE)
+
+
+def extract_symptom_focused_answer(query, content):
+    if "symptom" not in query.lower():
+        return content
+    match = _SYMPTOM_SENTENCE_PATTERN.search(content)
+    return match.group(0).strip() if match else None
+
+
 def inject_custom_css():
     st.markdown(
         """
@@ -1369,10 +1383,17 @@ def render_qa_pipeline_view():
 
     top = results[0]
     st.markdown("### 🏆 Top-1 Recommended Advisory Answer")
+    focused_answer = extract_symptom_focused_answer(user_query, top["content"])
+    if focused_answer is None:
+        st.warning(
+            f"😕 We don't have deficiency symptoms specifically listed for **{top['title']}** yet. "
+            "Let me know and I can add it."
+        )
+        focused_answer = top["content"]
     col_top1, col_top2 = st.columns([3, 1])
     with col_top1:
         render_result_card(
-            top["title"], top["content"], trust_score=top["trust_score"],
+            top["title"], focused_answer, trust_score=top["trust_score"],
             meta=(f"BM25: {top['features']['bm25_score']:.2f} | "
                   f"Semantic: {top['features']['vector_score']:.2f}"),
         )
