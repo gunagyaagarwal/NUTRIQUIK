@@ -195,6 +195,11 @@ IN_DOMAIN_EXAMPLES = [
     "how many eggs a day is healthy", "egg protein content", "scrambled eggs recipe",
     "how to make an omelette", "omelette recipe", "boiled eggs recipe", "egg curry recipe",
     "egg bhurji recipe", "egg salad recipe", "egg sandwich recipe", "poached eggs recipe",
+    # General concepts
+    "what is nutrition", "what is immunology", "what are vitamins and minerals",
+    "difference between fat soluble and water soluble vitamins", "what is the immune system",
+    # Vitamin B specifically
+    "vitamin b12 rich foods", "vitamin b6 rich foods", "vitamin b recipes", "vitamin b12 recipe",
 ]
 
 OUT_OF_DOMAIN_EXAMPLES = [

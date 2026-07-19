@@ -178,6 +178,14 @@ DIET_LABEL_TO_DOC_ID = {
     "Balanced": "diet_balanced",
 }
 
+# Ordered longest-first so "vitamin b12"/"vitamin b6" are matched specifically
+# rather than only ever matching the generic "vitamin b" prefix.
+NUTRIENT_QUERY_TERMS = [
+    "vitamin b12", "vitamin b6", "vitamin a", "vitamin b", "vitamin c", "vitamin d",
+    "vitamin e", "vitamin k", "calcium", "iron", "magnesium", "zinc", "potassium",
+    "protein", "fiber", "fibre",
+]
+
 # Requires actual planning/recommendation intent, not just a nutrient word appearing
 # anywhere in the query — "foods rich in protein" or "recipes containing low sodium"
 # are plain advisory/factual lookups, not a request to build a personalized diet plan.
@@ -1232,12 +1240,29 @@ def run_full_pipeline(query):
         k in query.lower() for k in
         ("recipe", "recipi", "milkshake", "smoothie", "how to make", "how to cook")
     )
+    # A recipe genuinely rich in a named nutrient (e.g. vitamin B) doesn't
+    # necessarily rank in the top ~15 by semantic similarity — "vitamin b" as a
+    # query doesn't embed meaningfully differently from "vitamin c" or "vitamin
+    # a", so the actually-relevant recipes can sit far down the ranking. Cast a
+    # much wider net when a specific nutrient is named so the strict content
+    # filter below has real candidates to work with, not just whatever the
+    # semantic ranking happened to prefer.
+    recipe_nutrient_terms = (
+        [term for term in NUTRIENT_QUERY_TERMS if term in query.lower()] if is_recipe_request else []
+    )
     retrieval_query = normalize_query_spelling(query)
 
     try:
         index, _ = get_bm25_index()
         vector_index = get_vector_index()
-        top_k = 20 if intent == "factual" else (15 if is_recipe_request else 5)
+        if intent == "factual":
+            top_k = 20
+        elif recipe_nutrient_terms:
+            top_k = 300
+        elif is_recipe_request:
+            top_k = 15
+        else:
+            top_k = 5
         search_results = hybrid_search(retrieval_query, index, vector_index, top_k=top_k)
     except Exception as e:
         return {
@@ -1250,6 +1275,21 @@ def run_full_pipeline(query):
             r for r in search_results
             if index.doc_metadata.get(r["doc_id"], {}).get("category") == "Recipes"
         ]
+        # A recipe can rank well for "vitamin b" purely on semantic similarity to
+        # generic "vitamin X: ... (notably rich)" phrasing even when it has zero
+        # actual vitamin B content — the fix is a literal, lexical requirement
+        # that the specific nutrient be named in the recipe's content, not just
+        # "vitamin-shaped" content in general.
+        if recipe_nutrient_terms:
+            nutrient_filtered = [
+                r for r in search_results
+                if any(
+                    term in index.doc_metadata.get(r["doc_id"], {}).get("content", "").lower()
+                    for term in recipe_nutrient_terms
+                )
+            ]
+            if nutrient_filtered:
+                search_results = nutrient_filtered
 
     if intent == "factual":
         # A recipe is never a valid answer to a definitional "what is X" query —
