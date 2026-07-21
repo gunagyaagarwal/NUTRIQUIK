@@ -869,6 +869,12 @@ def render_footer():
         '</div>'
     )
     st.markdown(footer_html, unsafe_allow_html=True)
+    # Previously repeated inline after every factual answer that skipped AI refinement —
+    # moved here so it appears once, site-wide, instead of cluttering each individual result.
+    st.caption(
+        "💡 NUTRIQUIK provides general nutrition/health information — consult a registered "
+        "dietitian or healthcare provider for personalized advice."
+    )
 
 
 @st.cache_resource
@@ -1522,20 +1528,13 @@ def render_qa_pipeline_view():
         with col_text:
             original_text = top["content"]
             raw_text = original_text
-            ai_refined = False
             try:
                 with st.spinner("Refining with AI..."):
                     refined = refine_answer(original_text, user_query)
                 if refined and refined.strip() and refined != original_text:
                     raw_text = refined
-                    ai_refined = True
             except Exception:
                 pass
-            if not ai_refined:
-                raw_text = (
-                    f"{raw_text}\n\n💡 In summary: this is general nutrition/health information — "
-                    "consult a registered dietitian or healthcare provider for personalized advice."
-                )
             render_result_card(top["title"], raw_text, meta=f"Doc: {top['doc_id']}")
 
         if len(results) > 1:
