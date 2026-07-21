@@ -94,6 +94,29 @@ BINARY_FIELDS = {
     ],
 }
 
+# Only demographic facts about the person (age, sex/gender, height, weight) carry over
+# as convenience prefill across different model forms and later visits to the same form
+# in a session. A model's own clinical/lab readings (blood counts, ECG results, symptom
+# checkboxes, glucose levels, etc.) are point-in-time results specific to that one
+# assessment — without this allowlist, EVERY feature of EVERY submitted form (e.g. Chest
+# pain type, FBS over 120, Thallium) got dumped into the shared profile and silently
+# resurfaced as "using your saved info" on a later, unrelated visit to that form.
+PERSISTENT_PROFILE_FIELDS = {
+    "Age", "age", "Sex", "Height_cm", "Weight_kg",
+    "gender_Female", "gender_Male", "gender_Other",
+}
+
+# "Sex" is a demographic category, not a yes/no clinical flag — it was previously
+# rendered through the generic BINARY_FIELDS Yes/No dropdown (nonsensical: "Sex: No"?),
+# so it gets its own [label for 0, label for 1] mapping per model instead. Heart uses
+# the standard UCI Heart Disease dataset convention (1=Male, 0=Female); anemia's
+# encoding was inferred from its training data, where Sex=0 has the higher average
+# hemoglobin, consistent with Sex=0 being Male.
+SEX_FIELD_OPTIONS = {
+    "anemia": ["Male", "Female"],
+    "heart": ["Female", "Male"],
+}
+
 # Small-integer categoricals with a fixed valid-value set (not full label encoders,
 # but still must be constrained so users can't submit an out-of-range code).
 CATEGORICAL_RANGES = {
@@ -961,7 +984,14 @@ def render_prediction_form(model_name):
             idx += 1
             saved = profile.get(col)
 
-            if col in encoders:
+            if col == "Sex" and model_name in SEX_FIELD_OPTIONS:
+                options = SEX_FIELD_OPTIONS[model_name]
+                default_index = int(saved) if saved in (0, 1) else 0
+                if saved in (0, 1):
+                    prefilled_fields.append(col)
+                choice = target.selectbox(col, options, index=default_index, key=f"{model_name}_{col}")
+                field_values[col] = options.index(choice)
+            elif col in encoders:
                 classes = list(encoders[col].classes_)
                 index = classes.index(saved) if saved in classes else 0
                 if saved in classes:
@@ -1083,7 +1113,9 @@ def run_prediction_flow(disease):
         return
 
     model_name, inputs = result
-    st.session_state.user_profile.update(inputs)
+    st.session_state.user_profile.update(
+        {k: v for k, v in inputs.items() if k in PERSISTENT_PROFILE_FIELDS}
+    )
     registry = get_registry_safe()
     if model_name not in registry:
         st.warning(f"No trained model available for '{model_name}' yet.")
@@ -1152,7 +1184,9 @@ def render_diet_recommendation_flow():
         return
 
     model_name, inputs = result
-    st.session_state.user_profile.update(inputs)
+    st.session_state.user_profile.update(
+        {k: v for k, v in inputs.items() if k in PERSISTENT_PROFILE_FIELDS}
+    )
     registry = get_registry_safe()
     if model_name not in registry:
         st.warning(f"No trained model available for '{model_name}' yet.")
