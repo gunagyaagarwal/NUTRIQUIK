@@ -12,9 +12,9 @@ MODEL_PATH = os.path.join(BASE_DIR, "models", "domain_classifier.pkl")
 DOMAIN_CONFIDENCE_THRESHOLD = 0.5
 
 BLOCKLIST_TERMS = [
-    "poison", "kill", "murder", "suicide", "self-harm", "self harm",
+    "poison", "kill", "murder",
     "drug abuse", "overdose", "weapon", "bomb", "explosive", "attack",
-    "torture", "harm myself", "hurt someone", "lethal", "how to make drugs",
+    "torture", "hurt someone", "lethal", "how to make drugs",
 ]
 
 BLOCKLIST_PATTERN = re.compile(
@@ -27,6 +27,38 @@ HARMFUL_CONTENT_RESULT = {
     "reason": "harmful_content",
     "message": "I can't help with harmful content. I only answer nutrition and health questions.",
     "suggestion": "Try: 'What are the benefits of Vitamin C?'",
+}
+
+# Checked separately from BLOCKLIST_TERMS (and before it) so a self-harm/suicide query
+# gets routed to crisis resources instead of the generic "I can't help with harmful
+# content" refusal — a flat refusal is the wrong response to someone in crisis.
+SELF_HARM_TERMS = [
+    "suicide", "suicidal", "self-harm", "self harm", "selfharm",
+    "harm myself", "hurt myself", "kill myself", "end my life", "ending my life",
+    "take my own life", "want to die", "don't want to live", "no reason to live",
+    "better off dead",
+]
+
+SELF_HARM_PATTERN = re.compile(
+    r"\b(?:" + "|".join(re.escape(term) for term in sorted(SELF_HARM_TERMS, key=len, reverse=True)) + r")\b",
+    re.IGNORECASE,
+)
+
+SELF_HARM_RESULT = {
+    "allowed": False,
+    "reason": "self_harm",
+    "message": (
+        "It sounds like you might be going through something really painful right now. "
+        "You deserve support from someone who can help — please reach out to a crisis helpline:\n\n"
+        "- **KIRAN Mental Health Helpline (India, 24/7, toll-free):** 1800-599-0019\n"
+        "- **Vandrevala Foundation Helpline (India, 24/7):** 1860-2662-345 / 1800-2333-330\n"
+        "- **iCall (TISS):** 9152987821\n"
+        "- **AASRA:** +91-9820466726\n"
+        "- **Emergency services (India):** 112\n\n"
+        "Outside India, visit findahelpline.com to find a crisis line in your country. "
+        "If you're in immediate danger, please contact emergency services right away."
+    ),
+    "suggestion": None,
 }
 
 IN_DOMAIN_EXAMPLES = [
@@ -200,6 +232,18 @@ IN_DOMAIN_EXAMPLES = [
     "difference between fat soluble and water soluble vitamins", "what is the immune system",
     # Vitamin B specifically
     "vitamin b12 rich foods", "vitamin b6 rich foods", "vitamin b recipes", "vitamin b12 recipe",
+    # Common whole foods/dishes that get asked about as bare single-word queries
+    "is milk healthy", "milk nutrition facts", "benefits of drinking milk", "milk",
+    "is pizza healthy", "pizza nutrition facts", "is pizza bad for you", "pizza",
+    "is chicken healthy", "chicken nutrition facts", "chicken protein content", "chicken",
+    "vegetarian diet", "veg diet", "veg", "non-veg diet", "non veg food", "non-veg",
+    # Symptoms often asked as a bare word/short phrase
+    "vomiting", "vomit after eating", "why am i vomiting", "nausea and vomiting",
+    # ADHD and nutrition
+    "what is adhd", "adhd diet", "foods for adhd", "adhd nutrition", "adhd",
+    # Comparison-style questions between two foods/topics
+    "egg vs chicken", "is egg better than chicken", "which is better egg or chicken",
+    "milk vs egg which is healthier", "chicken vs paneer protein",
 ]
 
 OUT_OF_DOMAIN_EXAMPLES = [
@@ -279,11 +323,18 @@ DOMAIN_KEYWORDS = [
     # More vegetables not already covered above.
     "cucumber", "cauliflower", "cabbage", "bell pepper", "capsicum", "sweet potato", "beetroot", "beet",
     "milkshake", "smoothie", "egg", "omelette", "omelet",
+    # Common whole foods/dishes and symptoms/conditions frequently asked about as bare,
+    # single-word queries with zero TF-IDF vocabulary overlap against the training examples.
+    "milk", "pizza", "chicken", "veg", "vomit", "adhd",
 ]
 
 
 def check_blocklist(query):
     return bool(BLOCKLIST_PATTERN.search(query))
+
+
+def check_self_harm(query):
+    return bool(SELF_HARM_PATTERN.search(query))
 
 
 def has_domain_keyword(query):
@@ -330,6 +381,9 @@ def classify_domain(query, model):
 
 
 def run_query_guard(query, model=None):
+    if check_self_harm(query):
+        return dict(SELF_HARM_RESULT)
+
     if check_blocklist(query):
         return dict(HARMFUL_CONTENT_RESULT)
 

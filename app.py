@@ -264,6 +264,44 @@ def find_named_vitamin_mineral_doc(query, index):
     return None
 
 
+# A query naming two things ("egg or chicken", "milk vs paneer", "which is better ...")
+# wants BOTH sides addressed — the factual track otherwise always truncates to a single
+# top-ranked document, which silently drops the second thing being asked about and
+# answers as if only one item was ever mentioned.
+_COMPARISON_PATTERN = re.compile(
+    r"\b(vs\.?|versus|compare[d]?(?:\s+to)?|which is (?:better|healthier)|better than|"
+    r"worse than|difference between)\b",
+    re.IGNORECASE,
+)
+_OR_COMPARISON_PATTERN = re.compile(
+    r"\b(better|healthier|healthy|good for (?:you|health)|worse)\b.*\bor\b|"
+    r"\bor\b.*\b(better|healthier)\b",
+    re.IGNORECASE,
+)
+
+
+def is_comparison_query(query):
+    query_lower = query.lower()
+    return bool(_COMPARISON_PATTERN.search(query_lower) or _OR_COMPARISON_PATTERN.search(query_lower))
+
+
+# Direct overrides for topics where "veg"/"non-veg" style phrasing reliably ranks the
+# wrong Diet Plans doc via vector similarity (both docs share almost all the same
+# "diet"/"nutrition" vocabulary, so the ranking signal is weak) — checked non-veg
+# first since "non-vegetarian" also contains the word "vegetarian".
+_NAMED_DIET_OVERRIDES = [
+    (re.compile(r"\bnon[- ]?veg(?:etarian)?\b", re.IGNORECASE), "diet_002"),
+    (re.compile(r"\bveg(?:etarian)?\b", re.IGNORECASE), "diet_001"),
+]
+
+
+def find_named_diet_doc(query):
+    for pattern, doc_id in _NAMED_DIET_OVERRIDES:
+        if pattern.search(query):
+            return doc_id
+    return None
+
+
 def inject_custom_css():
     st.markdown(
         """
@@ -968,6 +1006,24 @@ def render_prediction_form(model_name):
             continue
         inputs[col] = val
 
+    if bmi_config and bmi_value is None:
+        missing_fields.append(bmi_config["bmi_col"])
+
+    # A blank numeric field silently defaulting to 0 is NOT a neutral "unknown" value for
+    # these models — 0 is often the single most extreme possible reading (e.g. 0% of RDA
+    # vitamin C intake, 0 g/dL hemoglobin, 0 mg/dL blood glucose), so it previously produced
+    # wildly wrong, overconfident predictions (e.g. 98% anemia risk from only entering age;
+    # near-100% "Scurvy" from otherwise-blank intake fields). Refuse to predict rather than
+    # silently guessing when any of these lab/measurement fields are left blank.
+    if missing_fields:
+        friendly = [FIELD_LABELS.get(c, c.replace("_", " ")) for c in missing_fields]
+        st.error(
+            f"🚫 Prediction blocked — please fill in: {', '.join(friendly)}. These are lab/measurement "
+            "values, and leaving them blank would default to 0, which is an extreme (not neutral) value "
+            "for this model and would produce an unreliable, misleading result."
+        )
+        return None
+
     for group_name, group_cols in onehot_groups.items():
         chosen_col = f"{group_name}_{group_choice[group_name]}"
         for c in group_cols:
@@ -978,25 +1034,16 @@ def render_prediction_form(model_name):
         inputs.setdefault(lab_col, 0.0)
 
     if bmi_config:
-        if bmi_value is not None:
-            inputs[bmi_config["bmi_col"]] = bmi_value
-        else:
-            missing_fields.append(bmi_config["bmi_col"])
-            inputs[bmi_config["bmi_col"]] = 0.0
+        inputs[bmi_config["bmi_col"]] = bmi_value
         if "weight_col" in bmi_config:
-            inputs[bmi_config["weight_col"]] = weight_kg if weight_kg else 0.0
+            inputs[bmi_config["weight_col"]] = weight_kg
         if "height_col" in bmi_config:
-            inputs[bmi_config["height_col"]] = height_cm if height_cm else 0.0
+            inputs[bmi_config["height_col"]] = height_cm
         st.session_state.user_profile["Height_cm"] = height_cm
         st.session_state.user_profile["Weight_kg"] = weight_kg
 
     for col, default_value in hidden_default_fields.items():
         inputs[col] = default_value
-
-    if missing_fields:
-        st.warning(
-            f"⚠️ Left blank: {', '.join(missing_fields)} — treated as 0, prediction confidence may be reduced."
-        )
 
     return model_name, inputs
 
@@ -1213,6 +1260,7 @@ def run_full_pipeline(query):
         return {
             "status": "REJECTED_BY_GUARD",
             "reason": guard_result.get("message", "Blocked by guardrail."),
+            "guard_reason": guard_result.get("reason"),
         }
 
     try:
@@ -1304,18 +1352,24 @@ def run_full_pipeline(query):
             if index.doc_metadata.get(r["doc_id"], {}).get("category") != "Recipes"
         ]
         non_recipe.sort(key=lambda r: r["vector_score"], reverse=True)
-        factual_results = non_recipe[:1]
+        comparison = is_comparison_query(query)
+        # A comparison query ("egg or chicken", "milk vs paneer") is asking about two
+        # things at once — truncating to a single top result silently drops whichever
+        # side scored lower, answering as though only one item was ever named.
+        factual_results = non_recipe[:2] if comparison else non_recipe[:1]
 
         # If the query directly names a specific vitamin/mineral, that document
         # wins outright over whatever the generic vector-score ranking preferred —
         # semantic similarity alone is unreliable for disambiguating "vitamin a
         # deficiency" from the broader Vitamin Deficiency Overview or unrelated
-        # docs that just happen to share more vocabulary.
-        named_doc_id = find_named_vitamin_mineral_doc(query, index)
-        if named_doc_id:
-            named_match = next((r for r in non_recipe if r["doc_id"] == named_doc_id), None)
-            if named_match:
-                factual_results = [named_match]
+        # docs that just happen to share more vocabulary. Skipped for comparison
+        # queries, which already keep multiple results instead of collapsing to one.
+        if not comparison:
+            named_doc_id = find_named_vitamin_mineral_doc(query, index) or find_named_diet_doc(query)
+            if named_doc_id:
+                named_match = next((r for r in non_recipe if r["doc_id"] == named_doc_id), None)
+                if named_match:
+                    factual_results = [named_match]
 
         # A "vitamin/mineral deficiency" query is really asking about the deficiency
         # DISEASE it causes (e.g. vitamin D deficiency -> Rickets), not just the
@@ -1376,8 +1430,12 @@ def render_qa_pipeline_view():
     pipeline_output = run_full_pipeline(user_query)
 
     if pipeline_output["status"] == "REJECTED_BY_GUARD":
-        st.error(f"🛑 Query Blocked by Safety Guardrail — {pipeline_output['reason']}")
-        st.caption("NUTRIQUIK guardrails automatically intercept unsafe, toxic, or out-of-domain requests.")
+        if pipeline_output.get("guard_reason") == "self_harm":
+            st.error("💙 **You're not alone — please reach out for support.**")
+            st.markdown(pipeline_output["reason"])
+        else:
+            st.error(f"🛑 Query Blocked by Safety Guardrail — {pipeline_output['reason']}")
+            st.caption("NUTRIQUIK guardrails automatically intercept unsafe, toxic, or out-of-domain requests.")
         return
 
     intent = pipeline_output["intent"]

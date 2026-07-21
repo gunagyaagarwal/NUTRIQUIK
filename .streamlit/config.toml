@@ -1,2 +1,16 @@
 [server]
 fileWatcherType = "none"
+
+# Custom CSS in app.py hardcodes a dark palette (#0B0F17 background, #F8FAFC text, etc.)
+# that assumes Streamlit's dark theme is active. Switching to the built-in Light theme
+# via the Settings menu produced a broken half-light/half-dark UI (unreadable text,
+# mismatched widget backgrounds), since the custom CSS never adapts to a light base.
+# Declaring a custom theme here fixes the app to this dark palette and removes the
+# theme selector from the Settings menu entirely, so users can no longer switch to the
+# incompatible Light theme.
+[theme]
+base = "dark"
+primaryColor = "#16B8D9"
+backgroundColor = "#0B0F17"
+secondaryBackgroundColor = "#272833"
+textColor = "#F8FAFC"
