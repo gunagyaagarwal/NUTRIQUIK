@@ -244,6 +244,19 @@ IN_DOMAIN_EXAMPLES = [
     # Comparison-style questions between two foods/topics
     "egg vs chicken", "is egg better than chicken", "which is better egg or chicken",
     "milk vs egg which is healthier", "chicken vs paneer protein",
+    # Nutrition FAQ topics
+    "is skipping breakfast bad", "is it bad to skip breakfast", "are carbs bad for you",
+    "are carbohydrates bad for you", "how much protein do i need", "how much protein do i actually need",
+    "do i need to drink 8 glasses of water a day", "how much water should i drink a day",
+    "are all fats unhealthy", "are all fats bad for you", "fresh vs frozen vegetables",
+    "fresh vs frozen fruit", "is frozen produce as healthy as fresh",
+    "do i need a strict diet to lose weight", "do i need to follow a strict diet to be healthy",
+    "what is the balanced plate method", "is organic produce always healthier",
+    "is organic food healthier than conventional", "should i take a multivitamin",
+    "should i take supplements", "difference between probiotics and prebiotics",
+    "what are prebiotics", "how to read a nutrition label", "what does percent daily value mean",
+    "how does sleep affect weight and diet", "does lack of sleep cause weight gain",
+    "how does sleep affect appetite",
 ]
 
 OUT_OF_DOMAIN_EXAMPLES = [
@@ -326,6 +339,9 @@ DOMAIN_KEYWORDS = [
     # Common whole foods/dishes and symptoms/conditions frequently asked about as bare,
     # single-word queries with zero TF-IDF vocabulary overlap against the training examples.
     "milk", "pizza", "chicken", "veg", "vomit", "adhd",
+    # Nutrition FAQ topics not covered by any keyword above.
+    "breakfast", "water", "hydrat", "organic", "prebiotic", "sleep",
+    "nutrition label", "balanced plate",
 ]
 
 
