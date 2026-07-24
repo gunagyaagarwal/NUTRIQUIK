@@ -362,6 +362,20 @@ _phrase_doc_counts = Counter(
     phrase for phrases in VITAMIN_DEFICIENCY_SYMPTOMS.values() for phrase in set(phrases)
 )
 
+
+def _build_symptom_pattern(phrase):
+    """Match a symptom phrase as written ("hair loss") AND as one fused word
+    ("hairloss") — real users type both. Only multi-word phrases get a fused
+    variant; single words already match as-is."""
+    spaced = re.escape(phrase)
+    if " " not in phrase:
+        return re.compile(rf"\b{spaced}\b", re.IGNORECASE)
+    fused = re.escape(phrase.replace(" ", ""))
+    return re.compile(rf"\b(?:{spaced}|{fused})\b", re.IGNORECASE)
+
+
+_SYMPTOM_PATTERNS = {phrase: _build_symptom_pattern(phrase) for phrase in _phrase_doc_counts}
+
 # Gate on actual deficiency-inquiry framing so this override doesn't hijack unrelated
 # queries that happen to mention a generic symptom word like "fatigue" for other
 # reasons (e.g. "foods that fight fatigue" — an advisory query, not a symptom lookup).
@@ -377,12 +391,14 @@ _SYMPTOM_MATCH_MIN_WEIGHT = 0.3
 # contain any single listed symptom phrase (e.g. "bone pain") even though it's one
 # of the most common everyday ways people describe the classic Vitamin D deficiency
 # presentation (diffuse bone/muscle pain) — matched separately via a body-part +
-# "pain" regex rather than trying to enumerate every phrasing combination.
+# pain-word regex (covering both "leg pain"/"legs hurt" AND the fused "legpain")
+# rather than trying to enumerate every phrasing combination.
+_PAIN_WORDS = r"(?:pain|ache|aches|aching|hurt|hurts|hurting|sore|sores)"
+_BODY_PARTS = r"(?:leg|legs|arm|arms|limb|limbs|muscle|muscles|bone|bones|joint|joints|body)"
 _GENERALIZED_PAIN_PATTERN = re.compile(
-    r"\b(pain|ache|aches|aching|hurt|hurts|hurting|sore|sores)\b[^.]{0,25}"
-    r"\b(leg|legs|arm|arms|limb|limbs|muscle|muscles|bone|bones|joint|joints)\b"
-    r"|\b(leg|legs|arm|arms|limb|limbs|muscle|muscles|bone|bones|joint|joints)\b[^.]{0,25}"
-    r"\b(pain|ache|aches|aching|hurt|hurts|hurting|sore|sores)\b",
+    rf"\b{_PAIN_WORDS}\b[^.]{{0,25}}\b{_BODY_PARTS}\b"
+    rf"|\b{_BODY_PARTS}\b[^.]{{0,25}}\b{_PAIN_WORDS}\b"
+    rf"|\b{_BODY_PARTS}{_PAIN_WORDS}\b",
     re.IGNORECASE,
 )
 
@@ -390,13 +406,16 @@ _GENERALIZED_PAIN_PATTERN = re.compile(
 def find_symptom_matched_vitamin_doc(query):
     if not _DEFICIENCY_QUESTION_PATTERN.search(query):
         return None
-    query_lower = query.lower()
+    # Hyphens collapse to spaces so "hair-loss" is handled by the same "hair loss"
+    # match as the plain spaced phrasing, on top of the separately-checked fully
+    # fused "hairloss" variant in _SYMPTOM_PATTERNS.
+    normalized = query.replace("-", " ")
     scores = {}
     for doc_id, phrases in VITAMIN_DEFICIENCY_SYMPTOMS.items():
-        matched = {p for p in phrases if p in query_lower}
+        matched = {p for p in phrases if _SYMPTOM_PATTERNS[p].search(normalized)}
         if matched:
             scores[doc_id] = sum(1.0 / _phrase_doc_counts[p] for p in matched)
-    if _GENERALIZED_PAIN_PATTERN.search(query_lower):
+    if _GENERALIZED_PAIN_PATTERN.search(normalized):
         scores["vm_vitamin_d"] = scores.get("vm_vitamin_d", 0.0) + 1.0
     if not scores:
         return None
