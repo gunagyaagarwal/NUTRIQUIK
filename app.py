@@ -373,6 +373,19 @@ _DEFICIENCY_QUESTION_PATTERN = re.compile(r"deficien|which vitamin|what vitamin"
 # symptom or several overlapping ones before committing to a single nutrient.
 _SYMPTOM_MATCH_MIN_WEIGHT = 0.3
 
+# Generic "pain in my legs/arms/muscles/bones/joints" phrasing doesn't literally
+# contain any single listed symptom phrase (e.g. "bone pain") even though it's one
+# of the most common everyday ways people describe the classic Vitamin D deficiency
+# presentation (diffuse bone/muscle pain) — matched separately via a body-part +
+# "pain" regex rather than trying to enumerate every phrasing combination.
+_GENERALIZED_PAIN_PATTERN = re.compile(
+    r"\b(pain|ache|aches|aching|hurt|hurts|hurting|sore|sores)\b[^.]{0,25}"
+    r"\b(leg|legs|arm|arms|limb|limbs|muscle|muscles|bone|bones|joint|joints)\b"
+    r"|\b(leg|legs|arm|arms|limb|limbs|muscle|muscles|bone|bones|joint|joints)\b[^.]{0,25}"
+    r"\b(pain|ache|aches|aching|hurt|hurts|hurting|sore|sores)\b",
+    re.IGNORECASE,
+)
+
 
 def find_symptom_matched_vitamin_doc(query):
     if not _DEFICIENCY_QUESTION_PATTERN.search(query):
@@ -383,6 +396,8 @@ def find_symptom_matched_vitamin_doc(query):
         matched = {p for p in phrases if p in query_lower}
         if matched:
             scores[doc_id] = sum(1.0 / _phrase_doc_counts[p] for p in matched)
+    if _GENERALIZED_PAIN_PATTERN.search(query_lower):
+        scores["vm_vitamin_d"] = scores.get("vm_vitamin_d", 0.0) + 1.0
     if not scores:
         return None
     best_doc_id = max(scores, key=scores.get)
