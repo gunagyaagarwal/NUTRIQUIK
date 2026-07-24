@@ -95,24 +95,31 @@ BINARY_FIELDS = {
     ],
 }
 
-# Only demographic facts about the person (age, sex/gender, height, weight) carry over
-# as convenience prefill across different model forms and later visits to the same form
-# in a session. A model's own clinical/lab readings (blood counts, ECG results, symptom
-# checkboxes, glucose levels, etc.) are point-in-time results specific to that one
-# assessment — without this allowlist, EVERY feature of EVERY submitted form (e.g. Chest
-# pain type, FBS over 120, Thallium) got dumped into the shared profile and silently
-# resurfaced as "using your saved info" on a later, unrelated visit to that form.
+# Only demographic facts about the person (name, age, gender, height, weight) carry
+# over as convenience prefill across different model forms and later visits to the
+# same form in a session. A model's own clinical/lab readings (blood counts, ECG
+# results, symptom checkboxes, glucose levels, etc.) are point-in-time results specific
+# to that one assessment — without this allowlist, EVERY feature of EVERY submitted
+# form (e.g. Chest pain type, FBS over 120, Thallium) got dumped into the shared
+# profile and silently resurfaced as "using your saved info" on a later, unrelated
+# visit to that form.
 PERSISTENT_PROFILE_FIELDS = {
-    "Age", "age", "Sex", "Height_cm", "Weight_kg",
+    "Name", "Age", "age", "Gender", "Height_cm", "Weight_kg",
     "gender_Female", "gender_Male", "gender_Other",
 }
+
+# Collected once in the mandatory profile intake gate (see render_profile_intake_gate)
+# and reused everywhere a form asks for gender.
+GENDER_OPTIONS = ["Female", "Male", "Other"]
 
 # "Sex" is a demographic category, not a yes/no clinical flag — it was previously
 # rendered through the generic BINARY_FIELDS Yes/No dropdown (nonsensical: "Sex: No"?),
 # so it gets its own [label for 0, label for 1] mapping per model instead. Heart uses
 # the standard UCI Heart Disease dataset convention (1=Male, 0=Female); anemia's
 # encoding was inferred from its training data, where Sex=0 has the higher average
-# hemoglobin, consistent with Sex=0 being Male.
+# hemoglobin, consistent with Sex=0 being Male. Both are derived from the single
+# shared "Gender" profile value rather than storing a separate raw 0/1 "Sex" per
+# model, since anemia and heart use opposite 0/1 conventions for the same gender.
 SEX_FIELD_OPTIONS = {
     "anemia": ["Male", "Female"],
     "heart": ["Female", "Male"],
@@ -921,6 +928,42 @@ def render_hero():
     )
 
 
+def render_profile_intake_gate():
+    """One-time mandatory profile form shown before anything else is usable.
+    Name/Age/Gender collected here prefill into every prediction form's Age and
+    gender/Sex field afterward, via the same PERSISTENT_PROFILE_FIELDS mechanism
+    already used to carry those fields between forms."""
+    render_hero()
+    st.markdown("### 👋 Welcome — let's get to know you first")
+    st.caption(
+        "A quick one-time profile so NUTRIQUIK can pre-fill your age and gender "
+        "into every health assessment form automatically."
+    )
+    with st.form("profile_intake_form"):
+        name = st.text_input("Name")
+        age = st.number_input("Age", min_value=1, max_value=120, value=None, step=1)
+        gender = st.selectbox("Gender", GENDER_OPTIONS, index=None, placeholder="Select gender...")
+        submitted = st.form_submit_button("Continue to NUTRIQUIK →")
+
+    if not submitted:
+        return
+
+    if not (name and name.strip()) or age is None or gender is None:
+        st.warning("⚠️ Please fill in your name, age, and gender to continue.")
+        return
+
+    profile = st.session_state.user_profile
+    profile["Name"] = name.strip()
+    profile["Age"] = float(age)
+    profile["age"] = float(age)
+    profile["Gender"] = gender
+    for option in GENDER_OPTIONS:
+        profile[f"gender_{option}"] = 1 if option == gender else 0
+
+    st.session_state.profile_intake_done = True
+    st.rerun()
+
+
 def _leaf_svg(gradient_id, css_class=""):
     class_attr = f' class="{css_class}"' if css_class else ""
     return (
@@ -1082,8 +1125,9 @@ def render_prediction_form(model_name):
 
             if col == "Sex" and model_name in SEX_FIELD_OPTIONS:
                 options = SEX_FIELD_OPTIONS[model_name]
-                default_index = int(saved) if saved in (0, 1) else 0
-                if saved in (0, 1):
+                saved_gender = profile.get("Gender")
+                default_index = options.index(saved_gender) if saved_gender in options else 0
+                if saved_gender in options:
                     prefilled_fields.append(col)
                 choice = target.selectbox(col, options, index=default_index, key=f"{model_name}_{col}")
                 field_values[col] = options.index(choice)
@@ -1869,6 +1913,12 @@ if "show_more_clicked" not in st.session_state:
     st.session_state.show_more_clicked = False
 if "user_profile" not in st.session_state:
     st.session_state.user_profile = {}
+if "profile_intake_done" not in st.session_state:
+    st.session_state.profile_intake_done = False
+
+if not st.session_state.profile_intake_done:
+    render_profile_intake_gate()
+    st.stop()
 
 render_sidebar_brand()
 nav_choice = st.sidebar.radio(
@@ -1897,16 +1947,30 @@ if nav_choice in RETRIEVAL_VIEWS:
             pass  # surfaced per-query instead, via run_full_pipeline's error banner
 
 render_hero()
+profile_name = st.session_state.user_profile.get("Name")
+if profile_name:
+    st.caption(f"👋 Welcome, **{profile_name}**!")
 
 st.sidebar.markdown("---")
 with st.sidebar.expander("🗂️ Your Session Profile"):
-    if st.session_state.user_profile:
-        for field, value in st.session_state.user_profile.items():
-            st.write(f"- **{field}**: {value}")
-    else:
-        st.caption("No saved info yet — submit a prediction form to populate this.")
+    # "age"/"gender_Female"/etc. are the raw per-model duplicates of Age/Gender
+    # (see PERSISTENT_PROFILE_FIELDS) — show only the human-friendly originals.
+    DISPLAY_PROFILE_FIELDS = [
+        ("Name", "Name"), ("Age", "Age"), ("Gender", "Gender"),
+        ("Height_cm", "Height (cm)"), ("Weight_kg", "Weight (kg)"),
+    ]
+    shown_any = False
+    for key, label in DISPLAY_PROFILE_FIELDS:
+        value = st.session_state.user_profile.get(key)
+        if value is not None:
+            st.write(f"- **{label}**: {value}")
+            shown_any = True
+    if not shown_any:
+        st.caption("No saved info yet.")
     if st.button("Clear profile"):
         st.session_state.user_profile = {}
+        st.session_state.profile_intake_done = False
+        st.rerun()
 
 st.sidebar.markdown("---")
 st.sidebar.caption("🔎 Hybrid retrieval: BM25 (keyword) + MiniLM (semantic)")
