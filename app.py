@@ -5,6 +5,7 @@ import os
 import re
 import sys
 import urllib.parse
+from collections import Counter
 
 import pandas as pd
 import streamlit as st
@@ -285,6 +286,100 @@ def find_named_vitamin_mineral_doc(query, index):
         if title and re.search(rf"\b{re.escape(title.lower())}\b", query_lower):
             return doc_id
     return None
+
+
+# Deficiency symptom phrases per Vitamins & Minerals doc, taken directly from each
+# doc's own "Deficiency symptoms: ..." sentence (plus a few natural-phrasing variants,
+# e.g. "gums bleed" for "bleeding gums"). Used to identify the SPECIFIC nutrient a
+# user's described symptoms point to, rather than falling back to the generic Vitamin
+# Deficiency Overview — the same problem find_named_vitamin_mineral_doc solves for
+# queries that name a vitamin directly, but for queries that only describe symptoms
+# ("I have bleeding gums and fatigue, what am I deficient in?").
+VITAMIN_DEFICIENCY_SYMPTOMS = {
+    "vm_vitamin_a": ["night blindness", "dry eyes", "dry skin", "frequent infections"],
+    "vm_vitamin_b1": ["fatigue", "irritability", "nerve damage", "muscle weakness"],
+    "vm_vitamin_b2": ["cracked lips", "sore throat", "skin disorders", "eye fatigue"],
+    "vm_vitamin_b3": ["fatigue", "skin rashes", "digestive issues", "mental confusion"],
+    "vm_vitamin_b5": ["fatigue", "irritability", "numbness", "tingling"],
+    "vm_vitamin_b12": [
+        "fatigue", "weakness", "numbness", "tingling", "memory problems",
+        "forgetful", "pale skin",
+    ],
+    "vm_vitamin_b6": ["anemia", "skin rashes", "confusion", "weakened immunity"],
+    "vm_vitamin_b7": ["hair thinning", "thinning hair", "brittle nails", "skin rashes"],
+    "vm_vitamin_b9": ["fatigue", "weakness", "poor concentration", "birth defects"],
+    "vm_vitamin_c": [
+        "bleeding gums", "gums bleed", "gum bleeding", "bleeding gum",
+        "slow wound healing", "wounds heal slowly", "joint pain",
+        "easy bruising", "bruise easily",
+    ],
+    "vm_vitamin_d": ["bone pain", "bones ache", "muscle weakness", "fracture"],
+    "vm_vitamin_e": ["muscle weakness", "vision problems", "immune issues"],
+    "vm_vitamin_k": ["easy bruising", "bruise easily", "excessive bleeding", "poor bone health"],
+    "vm_calcium": ["muscle cramps", "brittle nails", "numbness", "fracture"],
+    "vm_iron": [
+        "fatigue", "pale skin", "weakness", "shortness of breath",
+        "cold hands", "cold feet",
+    ],
+    "vm_magnesium": ["muscle cramps", "fatigue", "irregular heartbeat", "numbness"],
+    "vm_zinc": ["hair loss", "losing hair", "delayed wound healing", "weakened immunity", "loss of appetite"],
+    "vm_potassium": ["muscle weakness", "cramps", "irregular heartbeat", "fatigue"],
+    "vm_sodium": ["nausea", "muscle cramps", "confusion", "low blood pressure"],
+    "vm_phosphorus": ["bone pain", "weakness", "loss of appetite"],
+    "vm_iodine": ["goiter", "fatigue", "weight gain", "developmental delays"],
+    "vm_selenium": ["muscle weakness", "fatigue", "weakened immunity", "thyroid problems"],
+    "vm_copper": ["fatigue", "pale skin", "weakened immunity", "brittle bones"],
+    "vm_manganese": ["bone malformation", "weakness", "impaired growth"],
+    "vm_chromium": ["impaired glucose tolerance", "weight loss"],
+    "vm_fluoride": ["tooth decay"],
+}
+
+# Direct nutrient -> corresponding Deficiency Diseases doc_id, for the few nutrients
+# that actually have a dedicated named disease in the corpus. Deliberately not
+# populated for nutrients without one (e.g. Vitamin B2, Zinc) — no link is better
+# than a wrong one.
+VITAMIN_TO_DEFICIENCY_DISEASE = {
+    "vm_vitamin_a": "dis_008",   # Night Blindness / Xerophthalmia
+    "vm_vitamin_b1": "dis_004",  # Beriberi
+    "vm_vitamin_b3": "dis_005",  # Pellagra
+    "vm_vitamin_b9": "dis_002",  # Anemia (folate deficiency)
+    "vm_vitamin_b12": "dis_002", # Anemia (pernicious anemia)
+    "vm_vitamin_c": "dis_001",   # Scurvy
+    "vm_vitamin_d": "dis_003",   # Rickets
+    "vm_calcium": "dis_003",     # Rickets
+    "vm_iron": "dis_002",        # Anemia
+    "vm_iodine": "dis_006",      # Goiter and Iodine Deficiency Disorders
+}
+
+_phrase_doc_counts = Counter(
+    phrase for phrases in VITAMIN_DEFICIENCY_SYMPTOMS.values() for phrase in set(phrases)
+)
+
+# Gate on actual deficiency-inquiry framing so this override doesn't hijack unrelated
+# queries that happen to mention a generic symptom word like "fatigue" for other
+# reasons (e.g. "foods that fight fatigue" — an advisory query, not a symptom lookup).
+_DEFICIENCY_QUESTION_PATTERN = re.compile(r"deficien|which vitamin|what vitamin", re.IGNORECASE)
+
+# A single common symptom shared across many nutrients (e.g. bare "fatigue", present
+# in ~10 of the docs above) shouldn't be enough to confidently pin down one specific
+# vitamin — this minimum total weight roughly requires either one fairly distinctive
+# symptom or several overlapping ones before committing to a single nutrient.
+_SYMPTOM_MATCH_MIN_WEIGHT = 0.3
+
+
+def find_symptom_matched_vitamin_doc(query):
+    if not _DEFICIENCY_QUESTION_PATTERN.search(query):
+        return None
+    query_lower = query.lower()
+    scores = {}
+    for doc_id, phrases in VITAMIN_DEFICIENCY_SYMPTOMS.items():
+        matched = {p for p in phrases if p in query_lower}
+        if matched:
+            scores[doc_id] = sum(1.0 / _phrase_doc_counts[p] for p in matched)
+    if not scores:
+        return None
+    best_doc_id = max(scores, key=scores.get)
+    return best_doc_id if scores[best_doc_id] >= _SYMPTOM_MATCH_MIN_WEIGHT else None
 
 
 # A query naming two things ("egg or chicken", "milk vs paneer", "which is better ...")
@@ -809,11 +904,6 @@ def reveal_more_results():
     st.session_state.show_more_clicked = True
 
 
-def set_query_prompt(prompt):
-    st.session_state.query_input = prompt
-    st.session_state.show_more_clicked = False
-
-
 def render_hero():
     st.markdown(
         """
@@ -1309,11 +1399,19 @@ def run_full_pipeline(query):
         intent = "factual"
 
     if intent == "prediction":
-        try:
-            disease = detect_disease_context(query)
-        except Exception:
-            disease = None
-        return {"status": "SUCCESS", "intent": "prediction", "disease": disease}
+        # "which deficiency"/"what vitamin am i" style phrasing classifies as
+        # prediction intent, but a user describing actual symptoms in plain text
+        # ("I have bleeding gums and fatigue...") wants a direct answer naming the
+        # specific nutrient, not a lab-value risk-assessment form asking for numbers
+        # they don't have. Only fall through to the form when no symptom match
+        # is confident enough to answer directly.
+        if find_symptom_matched_vitamin_doc(query) is None:
+            try:
+                disease = detect_disease_context(query)
+            except Exception:
+                disease = None
+            return {"status": "SUCCESS", "intent": "prediction", "disease": disease}
+        intent = "factual"
 
     if intent == "advisory" and is_personalized_diet_request(query):
         return {"status": "SUCCESS", "intent": "diet_form"}
@@ -1405,28 +1503,53 @@ def run_full_pipeline(query):
         # docs that just happen to share more vocabulary. Skipped for comparison
         # queries, which already keep multiple results instead of collapsing to one.
         if not comparison:
-            named_doc_id = find_named_vitamin_mineral_doc(query, index) or find_named_diet_doc(query)
+            named_doc_id = (
+                find_named_vitamin_mineral_doc(query, index)
+                or find_named_diet_doc(query)
+                or find_symptom_matched_vitamin_doc(query)
+            )
             if named_doc_id:
                 named_match = next((r for r in non_recipe if r["doc_id"] == named_doc_id), None)
+                if named_match is None:
+                    # A symptom-matched (or named) doc may not have surfaced in the
+                    # top-k semantic candidate pool at all — its own page can dilute
+                    # semantic similarity with unrelated content (RDA, food sources)
+                    # while a generic "Deficiency Overview" doc's narrower vocabulary
+                    # scores higher purely on overlap. Once matched with confidence,
+                    # answer with it directly rather than silently falling through.
+                    meta = index.doc_metadata.get(named_doc_id, {})
+                    if meta:
+                        named_match = {
+                            "doc_id": named_doc_id,
+                            "title": meta.get("title", ""),
+                            "content": meta.get("content", ""),
+                            "bm25_score": 0.0,
+                            "vector_score": 1.0,
+                        }
                 if named_match:
                     factual_results = [named_match]
 
         # A "vitamin/mineral deficiency" query is really asking about the deficiency
         # DISEASE it causes (e.g. vitamin D deficiency -> Rickets), not just the
-        # nutrient's general info page. Surface the linked disease doc too if it's
-        # a genuine match, not just whichever the vector score happened to prefer.
+        # nutrient's general info page. Use a direct, known mapping rather than
+        # picking whichever Deficiency Diseases doc happened to score highest by
+        # vector similarity — that previously surfaced wrong pairings (e.g. Vitamin A
+        # + Beriberi, or Vitamin B12 + Night Blindness) since generic "deficiency"
+        # vocabulary overlap doesn't track which disease a given nutrient actually causes.
         if factual_results and "deficien" in query.lower():
-            top_category = index.doc_metadata.get(factual_results[0]["doc_id"], {}).get("category")
+            top_doc_id = factual_results[0]["doc_id"]
+            top_category = index.doc_metadata.get(top_doc_id, {}).get("category")
             if top_category == "Vitamins & Minerals":
-                linked_disease = next(
-                    (r for r in non_recipe[1:]
-                     if index.doc_metadata.get(r["doc_id"], {}).get("category") == "Deficiency Diseases"
-                     and r["doc_id"] != "dis_vitamin_deficiency_overview"
-                     and r["vector_score"] >= FACTUAL_RELEVANCE_THRESHOLD),
-                    None,
-                )
-                if linked_disease:
-                    factual_results.append(linked_disease)
+                linked_disease_id = VITAMIN_TO_DEFICIENCY_DISEASE.get(top_doc_id)
+                linked_meta = index.doc_metadata.get(linked_disease_id, {}) if linked_disease_id else {}
+                if linked_meta:
+                    factual_results.append({
+                        "doc_id": linked_disease_id,
+                        "title": linked_meta.get("title", ""),
+                        "content": linked_meta.get("content", ""),
+                        "bm25_score": 0.0,
+                        "vector_score": 1.0,
+                    })
 
         return {"status": "SUCCESS", "intent": "factual", "results": factual_results, "rejected_results": []}
 
@@ -1443,20 +1566,11 @@ def render_qa_pipeline_view():
         theme="teal",
     )
 
-    st.markdown("**Quick Test Prompts:**")
-    col_p1, col_p2, col_p3, col_p4 = st.columns(4)
-    col_p1.button("🌿 Vitamin D & T-Cells", on_click=set_query_prompt,
-                  args=("What is the role of Vitamin D in T-cell regulation and immunity?",))
-    col_p2.button("🍋 Zinc & Vitamin C Synergy", on_click=set_query_prompt,
-                  args=("Can Zinc and Vitamin C work together for immunity?",))
-    col_p3.button("📘 What is RDA of Vitamin C?", on_click=set_query_prompt,
-                  args=("What is the recommended daily intake of Vitamin C?",))
-    col_p4.button("⚠️ Test Guardrail Trigger", on_click=set_query_prompt,
-                  args=("How to use bleach detox to kill viruses?",))
-
-    st.session_state.setdefault("query_input", "What is the role of Vitamin D in respiratory immunity?")
     with st.container(key="query_bar_container"):
-        user_query = st.text_input("Enter your nutrition/immunology query:", key="query_input")
+        user_query = st.text_input(
+            "Enter your nutrition/immunology query:", key="query_input",
+            placeholder="e.g. What is the role of Vitamin D in immunity?",
+        )
     search_triggered = st.button("🚀 Process Query", type="primary")
 
     if not (user_query or search_triggered):
