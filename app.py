@@ -911,6 +911,11 @@ def reveal_more_results():
     st.session_state.show_more_clicked = True
 
 
+def set_query_prompt(prompt):
+    st.session_state.query_input = prompt
+    st.session_state.show_more_clicked = False
+
+
 def render_hero():
     st.markdown(
         """
@@ -1609,6 +1614,17 @@ def render_qa_pipeline_view():
         "Real BM25 + MiniLM hybrid retrieval with heuristic trust scoring and XGBoost disease prediction.",
         theme="teal",
     )
+
+    st.markdown("**Quick Test Prompts:**")
+    col_p1, col_p2, col_p3, col_p4 = st.columns(4)
+    col_p1.button("🌿 Vitamin D & Immunity", on_click=set_query_prompt,
+                  args=("What is the role of Vitamin D in immunity?",))
+    col_p2.button("🍳 Egg Recipes", on_click=set_query_prompt,
+                  args=("egg recipes",))
+    col_p3.button("🩺 Diabetes Risk Check", on_click=set_query_prompt,
+                  args=("predict my diabetes risk",))
+    col_p4.button("😴 Sleep & Diet", on_click=set_query_prompt,
+                  args=("how does sleep affect weight and diet",))
 
     with st.container(key="query_bar_container"):
         user_query = st.text_input(
