@@ -217,6 +217,21 @@
   .foot-credits{width:100%;max-width:none;margin:0;padding:0;display:block;border-top:1px solid var(--border);background:var(--surface);}
   .foot-in{max-width:var(--maxw);margin:0 auto;padding:13px 24px;display:flex;justify-content:center;align-items:center;text-align:center;gap:14px;color:var(--text-2);font-size:13px;}
   @media(max-width:820px){ .tracks{grid-template-columns:1fr;} .stats{grid-template-columns:1fr 1fr;} }
+
+  /* ---------- profile modal ---------- */
+  .avatar{cursor:pointer;transition:transform .15s;}
+  .avatar:hover{transform:scale(1.08);}
+  .modal-backdrop{position:fixed;inset:0;background:rgba(6,9,16,.66);backdrop-filter:blur(2px);display:flex;
+    align-items:center;justify-content:center;z-index:60;padding:20px;}
+  .modal-backdrop.hidden{display:none;}
+  .modal-box{background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius);
+    padding:24px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.4);}
+  .modal-box h3{font-family:var(--serif);font-weight:500;font-size:19px;margin:0 0 6px;}
+  .modal-box .sub{color:var(--text-2);font-size:13px;margin:0 0 16px;}
+  .modal-close-row{display:flex;justify-content:flex-end;gap:10px;margin-top:6px;}
+  .btn-secondary{background:var(--surface-2);color:var(--text-2);font-weight:500;font-size:13.5px;
+    padding:9px 16px;border-radius:10px;border:1px solid var(--border);}
+  .btn-secondary:hover{color:var(--text);border-color:var(--border-strong);}
 </style>
 </head>
 <body>
@@ -232,10 +247,33 @@
       <a href="#top" class="active">Explore</a>
       <a href="#how">How it works</a>
       <a href="#team">Team</a>
-      <span class="avatar" title="Your profile">PS</span>
+      <span class="avatar" id="profileAvatar" title="Your profile">?</span>
     </div>
   </div>
 </nav>
+
+<div class="modal-backdrop hidden" id="profileModalBackdrop">
+  <div class="modal-box">
+    <h3 id="profileModalTitle">Tell us about you</h3>
+    <p class="sub" id="profileModalSub">This pre-fills your age and gender into every check-up form.</p>
+    <div class="field"><label>Name</label><input id="profName" type="text" placeholder="e.g. Priya Sharma"></div>
+    <div class="grid2">
+      <div class="field"><label>Age</label><input id="profAge" type="number" min="1" max="120" placeholder="e.g. 24"></div>
+      <div class="field"><label>Gender</label>
+        <div class="seg" id="profGender">
+          <button type="button" data-v="Female">Female</button>
+          <button type="button" data-v="Male">Male</button>
+          <button type="button" data-v="Other">Other</button>
+        </div>
+      </div>
+    </div>
+    <div id="profileModalWarning" class="hint" style="color:var(--red-hi);margin-bottom:8px;display:none;">Please fill in all three to save.</div>
+    <div class="modal-close-row">
+      <button class="btn-secondary" id="profileModalCancel">Cancel</button>
+      <button class="btn-primary" id="profileModalSave" style="width:auto;padding:10px 20px;">Save</button>
+    </div>
+  </div>
+</div>
 
 <!-- ===================== HERO ===================== -->
 <header class="hero" id="top">
@@ -257,7 +295,7 @@
       <button class="chip" data-q="How can I boost my immunity?"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>Boost immunity</button>
       <button class="chip" data-q="Best foods for iron deficiency"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 20a8 8 0 1 1 0-16 8 8 0 0 1 0 16Z"/><path d="M12 4V2"/></svg>Iron-rich foods</button>
       <button class="chip" data-q="What is vitamin C?"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>What is vitamin C?</button>
-      <button class="chip" data-q="Check my anemia risk"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M3 12h4l2 6 4-14 2 8h6"/></svg>Check my risk</button>
+      <button class="chip" id="checkMyRiskChip"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M3 12h4l2 6 4-14 2 8h6"/></svg>Check my risk</button>
     </div>
   </div>
 </header>
@@ -340,6 +378,71 @@
    factual/advisory/prediction tracks) lives in src/*, unchanged; this file
    only renders whatever it returns.
    ============================================================ */
+
+/* ---------------- profile (Name/Age/Gender, used to pre-fill check-up forms) ---------------- */
+function getProfile(){
+  try { return JSON.parse(localStorage.getItem('nq_profile') || 'null'); } catch(e){ return null; }
+}
+function saveProfile(p){ localStorage.setItem('nq_profile', JSON.stringify(p)); }
+
+function initialsFor(profile){
+  if(!profile || !profile.name) return '?';
+  const parts = profile.name.trim().split(/\s+/);
+  return ((parts[0]||'')[0]||'').toUpperCase() + ((parts[1]||'')[0]||'').toUpperCase() || '?';
+}
+
+function refreshAvatar(){
+  const profile = getProfile();
+  const avatar = document.getElementById('profileAvatar');
+  avatar.textContent = initialsFor(profile);
+  avatar.title = profile ? `${profile.name} — click to edit your profile` : 'Click to set up your profile';
+}
+
+function openProfileModal(){
+  const profile = getProfile();
+  const backdrop = document.getElementById('profileModalBackdrop');
+  const title = document.getElementById('profileModalTitle');
+  const sub = document.getElementById('profileModalSub');
+  document.getElementById('profileModalWarning').style.display = 'none';
+
+  if(profile){
+    title.textContent = 'Your profile';
+    sub.textContent = 'Edit your details — used to pre-fill your age and gender into every check-up form.';
+    document.getElementById('profName').value = profile.name || '';
+    document.getElementById('profAge').value = profile.age || '';
+  } else {
+    title.textContent = "We don't have your details yet";
+    sub.textContent = 'Fill this in once and every check-up form will pre-fill your age and gender automatically.';
+    document.getElementById('profName').value = '';
+    document.getElementById('profAge').value = '';
+  }
+  const genderGroup = document.getElementById('profGender');
+  genderGroup.querySelectorAll('button').forEach(b=>b.classList.toggle('sel', !!profile && b.dataset.v===profile.gender));
+
+  backdrop.classList.remove('hidden');
+}
+
+function closeProfileModal(){ document.getElementById('profileModalBackdrop').classList.add('hidden'); }
+
+document.getElementById('profileAvatar').addEventListener('click', openProfileModal);
+document.getElementById('profileModalCancel').addEventListener('click', closeProfileModal);
+document.getElementById('profGender').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+  document.getElementById('profGender').querySelectorAll('button').forEach(x=>x.classList.remove('sel'));
+  b.classList.add('sel');
+}));
+document.getElementById('profileModalSave').addEventListener('click',()=>{
+  const name = document.getElementById('profName').value.trim();
+  const age = document.getElementById('profAge').value;
+  const genderBtn = document.getElementById('profGender').querySelector('.sel');
+  const gender = genderBtn ? genderBtn.dataset.v : null;
+  if(!name || !age || !gender){
+    document.getElementById('profileModalWarning').style.display = 'block';
+    return;
+  }
+  saveProfile({name, age:Number(age), gender});
+  refreshAvatar();
+  closeProfileModal();
+});
 
 async function answer(query){
   try {
@@ -494,6 +597,18 @@ function wireField(f){
   }
 }
 
+function prefillField(f){
+  const profile = getProfile();
+  if(!profile) return;
+  const el = document.getElementById('f_'+cssId(f.id));
+  if(!el) return;
+  if((f.id==='Age' || f.id==='age') && f.type==='number'){
+    if(!el.value) el.value = profile.age;
+  } else if((f.id==='Sex' || f.id==='Gender' || f.id==='__group__gender') && f.type==='select'){
+    if([...el.options].some(o=>o.value===profile.gender)) el.value = profile.gender;
+  }
+}
+
 function readField(f){
   const dom = cssId(f.id);
   const el = document.getElementById('f_'+dom);
@@ -567,11 +682,13 @@ function renderPredictionForm(disease, spec){
   const easyGrid = document.getElementById('easyFields');
   easyFields.forEach(f=>{ easyGrid.insertAdjacentHTML('beforeend', fieldHTML(f)); });
   easyFields.forEach(wireField);
+  easyFields.forEach(prefillField);
 
   if(labFields.length){
     const labGrid = document.getElementById('labFields');
     labFields.forEach(f=>{ labGrid.insertAdjacentHTML('beforeend', fieldHTML(f)); });
     labFields.forEach(wireField);
+    labFields.forEach(prefillField);
     const lt=document.getElementById('labToggle'), labs=document.getElementById('labs');
     const toggleLabs=()=>{const o=labs.classList.toggle('show');lt.classList.toggle('open',o);lt.setAttribute('aria-expanded',o);};
     lt.addEventListener('click',toggleLabs);
@@ -623,11 +740,12 @@ async function runPrediction(disease, spec){
 }
 
 function renderPredictionResult(disease, spec, data){
-  const conf = data.confidence || 0;
+  const risk = data.risk || 0;
+  const accuracy = data.accuracy;
   const factors = data.factors || [];
   col.innerHTML=`<div class="card fade">
     <div class="result-head">
-      ${ringHTML(conf)}
+      ${ringHTML(risk)}
       <div>
         <span class="badge predict" style="margin-bottom:8px">${icon('bulb')} Your check-up</span>
         <div class="result-msg">${escapeHtml(data.label)}</div>
@@ -639,10 +757,14 @@ function renderPredictionResult(disease, spec, data){
       ${factors.map(f=>`<div class="feat"><span class="fname" style="width:auto">${escapeHtml(f.name)} ${f.direction==='raises'?'▲':'▼'} ${f.direction}</span></div>`).join('')}
     </div></div>`:''}
     <div class="ans-foot">
-      <span class="supported" style="color:var(--red-hi)">${icon('check')} ${Math.round(conf*100)}% confidence in this result</span>
+      <span class="supported" style="color:var(--red-hi)">${icon('check')} ${Math.round(risk*100)}% risk for your specific answers</span>
+      ${accuracy!=null?`<span class="supported">${icon('check')} ${Math.round(accuracy*100)}% model accuracy overall</span>`:''}
+    </div>
+    <div class="ans-foot" style="border-top:none;padding-top:0;margin-top:0;">
       <button class="linkbtn" id="editAnswersBtn">Edit answers ${icon('chev')}</button>
     </div>
-    <p class="disclaimer">"Confidence" is how sure the model is about your specific answers — not the same as how often the model is right overall${data.modelAccuracy!=null?` (this model's own measured accuracy on held-out test data: ${Math.round(data.modelAccuracy*100)}%)`:''}.</p>
+    <p class="disclaimer"><strong>Risk</strong> is this model's estimate for your specific answers, and changes with every check-up.<br>
+    <strong>Accuracy</strong> is a fixed number — how often this model was right on past held-out test data, regardless of what you enter.</p>
     <p class="disclaimer">Educational estimate only — please confirm with a healthcare professional.</p>
   </div>`;
   animRings();
@@ -666,11 +788,13 @@ async function ask(query){
 }
 
 document.getElementById('searchForm').addEventListener('submit',e=>{e.preventDefault();ask(document.getElementById('q').value);});
-document.getElementById('chips').addEventListener('click',e=>{const b=e.target.closest('.chip');if(b){document.getElementById('q').value=b.dataset.q;ask(b.dataset.q);}});
+document.getElementById('chips').addEventListener('click',e=>{const b=e.target.closest('.chip');if(b&&b.dataset.q){document.getElementById('q').value=b.dataset.q;ask(b.dataset.q);}});
+document.getElementById('checkMyRiskChip').addEventListener('click',()=>{renderPrediction(null);window.scrollTo({top:document.querySelector('.wrap').offsetTop-60,behavior:'smooth'});});
 document.getElementById('topics').addEventListener('click',e=>{const a=e.target.closest('a');if(a){e.preventDefault();document.getElementById('q').value=a.dataset.q;ask(a.dataset.q);}});
 document.getElementById('startCheckup').addEventListener('click',()=>{renderPrediction(null);window.scrollTo({top:document.querySelector('.wrap').offsetTop-60,behavior:'smooth'});});
 
 // friendly default on load — a real query against the live pipeline, not mock data
+refreshAvatar();
 ask("best foods for iron deficiency");
 /* ---------- interactive hero field: nutrient/immune-cell network (vanilla JS, no libraries) ---------- */
 (function(){

@@ -239,8 +239,7 @@ def api_predict(payload: PredictIn):
     display_name = model_name.replace("_", " ").title()
     message = (
         f"For the {display_name} assessment, the model predicts {prediction['prediction_label']} "
-        f"with a risk/confidence score of {risk_pct * 100:.1f}% "
-        f"(model confidence: {prediction['confidence'] * 100:.1f}%). "
+        f"with a risk score of {risk_pct * 100:.1f}% for this input. "
     )
     if risk_pct >= HIGH_RISK_THRESHOLD:
         message += "High risk detected — please take advice from a doctor for further evaluation."
@@ -258,17 +257,18 @@ def api_predict(payload: PredictIn):
             if doc_meta:
                 message += f"\n\nMatching diet plan — {doc_meta['title']}: {doc_meta['content']}"
 
-    # "confidence" is this model's predict_proba for THIS specific input — how sure the
-    # model is about this one case, not how often the model is right overall. That's a
-    # separate, fixed number from held-out test evaluation (model_registry.json) — surfaced
-    # here too so the two aren't conflated in the UI.
+    # Two genuinely different numbers, kept separate rather than both called "confidence":
+    # - risk: this model's predicted probability of the positive/disease outcome for THIS
+    #   specific input (varies prediction to prediction).
+    # - accuracy: this model's own fixed, held-out test accuracy (model_registry.json) —
+    #   how often the model is right in general, unrelated to any one input.
     model_accuracy = registry.get(model_name, {}).get("accuracy")
 
     return {
         "positive": bool(positive),
         "label": prediction["prediction_label"],
-        "confidence": float(prediction["confidence"]),
-        "modelAccuracy": float(model_accuracy) if model_accuracy is not None else None,
+        "risk": float(risk_pct),
+        "accuracy": float(model_accuracy) if model_accuracy is not None else None,
         "message": message,
         "hasLabs": True,
         "factors": factors,
