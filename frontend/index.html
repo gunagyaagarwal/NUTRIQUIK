@@ -232,6 +232,20 @@
   .btn-secondary{background:var(--surface-2);color:var(--text-2);font-weight:500;font-size:13.5px;
     padding:9px 16px;border-radius:10px;border:1px solid var(--border);}
   .btn-secondary:hover{color:var(--text);border-color:var(--border-strong);}
+
+  /* ---------- architecture blueprint ---------- */
+  .blueprint-diagram{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);
+    padding:20px;overflow-x:auto;margin-top:10px;}
+  .blueprint-diagram pre{margin:0;font-family:'SFMono-Regular',Consolas,Menlo,monospace;font-size:12.5px;
+    line-height:1.55;color:var(--text-2);white-space:pre;}
+  .wbs-table-wrap{overflow-x:auto;margin-top:10px;border:1px solid var(--border);border-radius:var(--radius-sm);}
+  table.wbs-table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--surface);}
+  table.wbs-table th{text-align:left;background:var(--surface-2);color:var(--text-2);font-weight:500;
+    padding:10px 14px;border-bottom:1px solid var(--border-strong);white-space:nowrap;}
+  table.wbs-table td{padding:12px 14px;border-bottom:1px solid var(--border);color:var(--text-2);
+    vertical-align:top;line-height:1.5;}
+  table.wbs-table tr:last-child td{border-bottom:none;}
+  table.wbs-table td:first-child{color:var(--text);font-weight:500;white-space:nowrap;}
 </style>
 </head>
 <body>
@@ -246,6 +260,7 @@
     <div class="nav-links">
       <a href="#top" class="active">Explore</a>
       <a href="#how">How it works</a>
+      <a href="#blueprint">Architecture</a>
       <a href="#team">Team</a>
       <span class="avatar" id="profileAvatar" title="Your profile">?</span>
     </div>
@@ -350,13 +365,82 @@
     <p class="sec-eyebrow">Under the hood</p>
     <h2 class="sec-title">Built to be trusted, not just clever</h2>
     <div class="stats">
-      <div class="stat"><div class="num g">394</div><div class="lbl">verified documents</div></div>
+      <div class="stat"><div class="num g">510</div><div class="lbl">verified documents</div></div>
       <div class="stat"><div class="num b">0.975</div><div class="lbl">retrieval MAP (hybrid)</div></div>
       <div class="stat"><div class="num r">7</div><div class="lbl">explainable ML models</div></div>
       <div class="stat"><div class="num g">100%</div><div class="lbl">answers cite their source</div></div>
     </div>
   </div>
 </section>
+
+<section class="band" id="blueprint">
+  <div class="band-in">
+    <p class="sec-eyebrow">Under the hood</p>
+    <h2 class="sec-title">System architecture &amp; work breakdown</h2>
+    <p class="sec-sub">Mapped to the actual implemented pipeline — the guard, router, and retrieval/prediction tracks above are exactly this flow, running behind a FastAPI backend with no separate service per feature.</p>
+    <div class="blueprint-diagram"><pre>                              User Query
+                                  |
+                                  v
+   Query Guard (regex blocklist + TF-IDF/LogReg domain classifier,
+   zero-vocabulary fail-safe) ---&gt; REJECTS harmful / off-domain
+                                  |
+                                  v
+        Intent Router (rule-based: Factual / Advisory / Prediction)
+            /                     |                      \
+     (Factual)               (Advisory)              (Prediction)
+         |                        |                        |
+ BM25 + MiniLM             BM25 + MiniLM          Disease Context Detector
+ Hybrid, top-1             Hybrid, top-5                   |
+         |                        |               XGBoost Model (7 models)
+ Optional Gemini           Heuristic Trust Score    + real SHAP explanation
+ LLM Refine                (9 weighted features)
+         |                        |
+ Show Answer + Source      Guardrail Filter (trust &lt; 0.30 cut)
+                                  |
+                                  v
+                    Top-1 shown first, optional "Show More" ranking</pre></div>
+
+    <h3 style="margin:32px 0 14px;font-family:var(--serif);font-weight:500;font-size:19px;">6-week work breakdown structure &amp; roles</h3>
+    <div class="wbs-table-wrap">
+      <table class="wbs-table">
+        <thead><tr><th>Phase</th><th>Activities</th><th>Lead</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>1. Requirements Analysis</td>
+            <td>Dataset collection and annotation, csv, IR evaluation (Precision, Recall)</td>
+            <td>Pulkit Sukhija — Data &amp; Evaluation Engineer</td>
+          </tr>
+          <tr>
+            <td>2. System Design</td>
+            <td>Overall coordination, XGBoost trust-scoring model, model evaluation</td>
+            <td>Gunagya Agarwal — Project Lead &amp; ML Engineer</td>
+          </tr>
+          <tr>
+            <td>3. Development</td>
+            <td>FastAPI backend, static HTML/CSS/JS frontend, trust breakdown &amp; risk visuals, ranking results / sparse retrieval (BM25), dense retrieval (fastembed MiniLM), indexing</td>
+            <td>Suryansh Singh — Frontend/Backend &amp; UI Developer / Mridul Rai — IR &amp; Backend Support</td>
+          </tr>
+          <tr>
+            <td>4. Testing</td>
+            <td>System integration, guardrail filter logic, testing</td>
+            <td>Pranav S Nair — Integration, Testing &amp; Deployment</td>
+          </tr>
+          <tr>
+            <td>5. Deployment</td>
+            <td>Cloud deployment</td>
+            <td>Pranav S Nair — Integration, Testing &amp; Deployment</td>
+          </tr>
+          <tr>
+            <td>6. Documentation</td>
+            <td>Report writing, presentation preparation</td>
+            <td>Gunagya Agarwal — Project Lead &amp; ML Engineer</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
 <section class="band" id="team">
   <div class="band-in">
     <p class="sec-eyebrow">The team</p>
