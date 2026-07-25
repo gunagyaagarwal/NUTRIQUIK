@@ -472,7 +472,7 @@ function fieldHTML(f){
   }
   const unit = f.unit ? ` (${escapeHtml(f.unit)})` : '';
   return `<div class="field"><label>${escapeHtml(f.label)}${help}</label>
-    <input id="f_${dom}" type="number" placeholder="optional${unit}"
+    <input id="f_${dom}" type="number" placeholder="recommended${unit}"
       ${f.min!=null?`min="${f.min}"`:''} ${f.max!=null?`max="${f.max}"`:''} ${f.step!=null?`step="${f.step}"`:''}></div>`;
 }
 
@@ -542,7 +542,7 @@ function renderPredictionForm(disease, spec){
     <span class="badge predict">${icon('bulb')} Quick check-up · ${escapeHtml(disease.replace(/_/g,' '))}</span>
     <h2 class="ans-title">${escapeHtml(spec.title)}</h2>
     ${spec.note?`<p class="ans-body" style="margin-bottom:14px">${escapeHtml(spec.note)}</p>`:''}
-    <p class="ans-body" style="margin-bottom:18px">Answer what you know. Lab values are optional to expand — leave them blank and we'll refuse to guess rather than fabricate a result, and simply ask you to fill them in.</p>
+    <p class="ans-body" style="margin-bottom:18px">Every field below is used in the prediction, so all are recommended — leave one blank and we'll refuse to guess rather than fabricate a result, and simply ask you to fill it in. Lab values are tucked into an optional-to-expand section below, purely to keep the form tidy.</p>
 
     ${bmiField ? `<div class="grid2">
       <div class="field"><label>Height <span class="hint">cm</span></label><input id="f_Height_cm" type="number" min="0" placeholder="e.g. 170"></div>
@@ -639,9 +639,10 @@ function renderPredictionResult(disease, spec, data){
       ${factors.map(f=>`<div class="feat"><span class="fname" style="width:auto">${escapeHtml(f.name)} ${f.direction==='raises'?'▲':'▼'} ${f.direction}</span></div>`).join('')}
     </div></div>`:''}
     <div class="ans-foot">
-      <span class="supported" style="color:var(--red-hi)">${icon('check')} ${Math.round(conf*100)}% confidence</span>
+      <span class="supported" style="color:var(--red-hi)">${icon('check')} ${Math.round(conf*100)}% confidence in this result</span>
       <button class="linkbtn" id="editAnswersBtn">Edit answers ${icon('chev')}</button>
     </div>
+    <p class="disclaimer">"Confidence" is how sure the model is about your specific answers — not the same as how often the model is right overall${data.modelAccuracy!=null?` (this model's own measured accuracy on held-out test data: ${Math.round(data.modelAccuracy*100)}%)`:''}.</p>
     <p class="disclaimer">Educational estimate only — please confirm with a healthcare professional.</p>
   </div>`;
   animRings();

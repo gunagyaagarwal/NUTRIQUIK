@@ -258,10 +258,17 @@ def api_predict(payload: PredictIn):
             if doc_meta:
                 message += f"\n\nMatching diet plan — {doc_meta['title']}: {doc_meta['content']}"
 
+    # "confidence" is this model's predict_proba for THIS specific input — how sure the
+    # model is about this one case, not how often the model is right overall. That's a
+    # separate, fixed number from held-out test evaluation (model_registry.json) — surfaced
+    # here too so the two aren't conflated in the UI.
+    model_accuracy = registry.get(model_name, {}).get("accuracy")
+
     return {
         "positive": bool(positive),
         "label": prediction["prediction_label"],
         "confidence": float(prediction["confidence"]),
+        "modelAccuracy": float(model_accuracy) if model_accuracy is not None else None,
         "message": message,
         "hasLabs": True,
         "factors": factors,
