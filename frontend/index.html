@@ -160,6 +160,9 @@
   .seg{display:flex;gap:8px;}
   .seg button{flex:1;background:var(--surface-2);border:1px solid var(--border-strong);border-radius:10px;padding:9px;font-size:13px;color:var(--text-2);}
   .seg button.sel{background:var(--primary-bg);border-color:var(--primary);color:var(--primary-hi);}
+  .field.field-error label{color:var(--red-hi);}
+  .field.field-error input,.field.field-error select{border-color:var(--red);box-shadow:0 0 0 2px rgba(236,91,99,.18);}
+  .field.field-error .seg{border:1px solid var(--red);border-radius:12px;padding:3px;}
   .labtoggle{display:flex;align-items:center;justify-content:space-between;background:var(--surface-2);
     border:1px solid var(--border);border-radius:10px;padding:11px 13px;font-size:13.5px;color:var(--text-2);margin-bottom:14px;}
   .labtoggle svg{width:16px;height:16px;stroke:var(--text-muted);transition:transform .2s;}
@@ -739,9 +742,41 @@ async function runPrediction(disease, spec){
 
   if(!res.ok){
     errBox.innerHTML=`<p class="ans-body" style="color:var(--red-hi)">🚫 ${escapeHtml(data.message||data.error||'Please fill in the required fields.')}</p>`;
+    highlightMissingFields(data.fields || []);
     return;
   }
+  document.querySelectorAll('.field-error').forEach(el=>el.classList.remove('field-error'));
   renderPredictionResult(disease, spec, data);
+}
+
+function highlightMissingFields(missingIds){
+  document.querySelectorAll('.field-error').forEach(el=>el.classList.remove('field-error'));
+  if(!missingIds.length) return;
+
+  const labs = document.getElementById('labs');
+  const labToggle = document.getElementById('labToggle');
+  let firstWrap = null;
+
+  missingIds.forEach(id=>{
+    const el = document.getElementById('f_'+cssId(id));
+    if(!el) return;
+    const wrap = el.closest('.field');
+    if(!wrap) return;
+    wrap.classList.add('field-error');
+    // Clear the highlight as soon as the user actually fixes this one field.
+    const clear = ()=>wrap.classList.remove('field-error');
+    el.addEventListener('input', clear, {once:true});
+    el.addEventListener('change', clear, {once:true});
+    el.addEventListener('click', clear, {once:true});
+    if(!firstWrap) firstWrap = wrap;
+  });
+
+  if(firstWrap && labs && labToggle && labs.contains(firstWrap) && !labs.classList.contains('show')){
+    labs.classList.add('show');
+    labToggle.classList.add('open');
+    labToggle.setAttribute('aria-expanded','true');
+  }
+  if(firstWrap) firstWrap.scrollIntoView({behavior:'smooth', block:'center'});
 }
 
 function renderPredictionResult(disease, spec, data){
