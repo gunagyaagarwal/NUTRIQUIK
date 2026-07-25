@@ -425,13 +425,27 @@ def run_full_pipeline(query):
         # side scored lower, answering as though only one item was ever named.
         factual_results = non_recipe[:2] if comparison else non_recipe[:1]
 
+        # A dedicated FAQ document ("Does Vitamin C Actually Work for Colds?", "How Do
+        # Zinc and Vitamin D Impact the Immune System?") that happens to name a specific
+        # vitamin should win on its own strong semantic match, not get blown away by the
+        # named-vitamin override below — that override exists to fix generic-overview-vs-
+        # specific-nutrient confusion (e.g. "vitamin a deficiency"), not to override an
+        # already highly-specific, well-matched FAQ answer that just happens to mention
+        # the same nutrient by name.
+        top_is_specific_faq = (
+            bool(non_recipe)
+            and index.doc_metadata.get(non_recipe[0]["doc_id"], {}).get("category")
+            in ("Nutrition FAQ", "Immunity FAQ")
+            and non_recipe[0]["vector_score"] >= 0.5
+        )
+
         # If the query directly names a specific vitamin/mineral, that document
         # wins outright over whatever the generic vector-score ranking preferred —
         # semantic similarity alone is unreliable for disambiguating "vitamin a
         # deficiency" from the broader Vitamin Deficiency Overview or unrelated
         # docs that just happen to share more vocabulary. Skipped for comparison
         # queries, which already keep multiple results instead of collapsing to one.
-        if not comparison:
+        if not comparison and not top_is_specific_faq:
             named_doc_id = (
                 find_named_vitamin_mineral_doc(query, index)
                 or find_named_diet_doc(query)

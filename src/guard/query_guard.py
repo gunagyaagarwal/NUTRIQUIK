@@ -257,6 +257,25 @@ IN_DOMAIN_EXAMPLES = [
     "what are prebiotics", "how to read a nutrition label", "what does percent daily value mean",
     "how does sleep affect weight and diet", "does lack of sleep cause weight gain",
     "how does sleep affect appetite",
+    # Immunity FAQ topics
+    "can you boost your immune system fast", "do instant immune booster drinks work",
+    "how does the gut microbiome connect to immunity", "gut microbiome",
+    "does sugar lower the immune system", "do immunity gummies actually work", "gummies",
+    "does the alkaline diet prevent sickness", "alkaline diet",
+    "is detoxing real for the immune system", "detox",
+    "is apple cider vinegar for immunity a myth", "apple cider vinegar",
+    "best immune foods for seniors", "elderly immune system diet",
+    "how do i boost my toddlers immune system", "toddler immunity",
+    "best pregnancy diet for immune support",
+    "what is the best diet for an overactive immune system",
+    "how does the aip autoimmune protocol diet work", "aip diet",
+    "which foods trigger autoimmune flare ups", "autoimmune diet",
+    "does bone broth help the immune system", "bone broth",
+    "do garlic and ginger work for a cold",
+    "what is the ayurvedic diet for immunity", "ayurvedic diet",
+    "should i eat when i have a fever", "eating with a fever",
+    "how does intermittent fasting affect the immune system",
+    "is feed a cold starve a fever true",
 ]
 
 OUT_OF_DOMAIN_EXAMPLES = [
@@ -342,6 +361,9 @@ DOMAIN_KEYWORDS = [
     # Nutrition FAQ topics not covered by any keyword above.
     "breakfast", "water", "hydrat", "organic", "prebiotic", "sleep",
     "nutrition label", "balanced plate",
+    # Immunity FAQ topics not covered by any keyword above.
+    "gummies", "detox", "alkaline", "vinegar", "broth", "ayurved",
+    "microbiome", "toddler", "elderly", "senior", "fever",
 ]
 
 
