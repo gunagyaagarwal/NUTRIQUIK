@@ -649,9 +649,12 @@ async function renderPrediction(disease){
 }
 
 function renderPredictionForm(disease, spec){
-  const easyFields = (spec.fields||[]).filter(f=>f.tier==='easy');
-  const labFields = (spec.fields||[]).filter(f=>f.tier==='lab');
   const bmiField = (spec.fields||[]).find(f=>f.tier==='derived');
+  // Height_cm/Weight_kg are already rendered by the dedicated BMI box below when a
+  // derived BMI field is present — skip them here so they don't render twice.
+  const bmiInputIds = bmiField ? new Set(['Height_cm', 'Weight_kg']) : new Set();
+  const easyFields = (spec.fields||[]).filter(f=>f.tier==='easy' && !bmiInputIds.has(f.id));
+  const labFields = (spec.fields||[]).filter(f=>f.tier==='lab' && !bmiInputIds.has(f.id));
 
   col.innerHTML=`<div class="card fade">
     <span class="badge predict">${icon('bulb')} Quick check-up · ${escapeHtml(disease.replace(/_/g,' '))}</span>
