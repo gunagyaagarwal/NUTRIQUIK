@@ -280,4 +280,9 @@ def serve_index():
     return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
 
 
+@app.get("/blueprint")
+def serve_blueprint():
+    return FileResponse(os.path.join(FRONTEND_DIR, "blueprint.html"))
+
+
 app.mount("/frontend", StaticFiles(directory=FRONTEND_DIR), name="frontend")
